@@ -319,8 +319,6 @@ if platform.system() == "Darwin":
             # Add only the default anchor certificates to the SecTrust
             status = Security.SecTrustSetAnchorCertificates(trust, None)
             assert status == 0  # TODO: Check status
-            status = Security.SecTrustSetAnchorCertificatesOnly(trust, True)
-            assert status == 0  # TODO: Check status
 
             cf_error = CoreFoundation.CFErrorRef()
             sec_trust_eval_result = Security.SecTrustEvaluateWithError(
@@ -348,13 +346,13 @@ if platform.system() == "Darwin":
 
                     # TODO: Not sure if we need the SecTrustResultType for anything?
                     # We only care whether or not it's a success or failure for now.
-                    sec_trust_result_type = Security.SecTrustResultType()
-                    status = Security.SecTrustGetTrustResult(
-                        trust, ctypes.byref(sec_trust_result_type)
-                    )
-                    assert status == 0  # TODO: Check status
+                    # sec_trust_result_type = Security.SecTrustResultType()
+                    # status = Security.SecTrustGetTrustResult(
+                    #     trust, ctypes.byref(sec_trust_result_type)
+                    # )
+                    # assert status == 0  # TODO: Check status
 
-                    err = ssl.SSLCertVerificationError()
+                    err = ssl.SSLCertVerificationError(cf_error_message)
                     err.verify_message = cf_error_message
                     err.verify_code = cf_error_code
                     raise err
