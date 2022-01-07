@@ -1,9 +1,39 @@
+import platform
 import socket
 import ssl
-from truststore import verify_peercerts
 
-sock = socket.create_connection(("example.com", 443))
-ctx = ssl.create_default_context()
-sock = ctx.wrap_socket(sock)
+import pytest
 
-verify_peercerts(sock, server_hostname="example.com")
+from truststore import Truststore
+
+
+def connect_to_host(host: str, use_server_hostname: bool = True):
+    sock = socket.create_connection((host, 443))
+    try:
+        ts = Truststore()
+        ts._ctx.check_hostname &= use_server_hostname
+        ts.wrap_socket(sock, server_hostname=host if use_server_hostname else None)
+    finally:
+        sock.close()
+
+
+def test_success():
+    connect_to_host("example.com")
+
+
+@pytest.mark.parametrize(
+    "host",
+    [
+        "expired.badssl.com" "wrong.host.badssl.com",
+        "self-signed.badssl.com",
+        "untrusted-root.badssl.com",
+        "revoked.badssl.com",
+        "superfish.badssl.com",
+    ],
+)
+def test_failures(host):
+    if platform.system() == "Linux" and host == "revoked.badssl.com":
+        pytest.skip("Linux currently doesn't support CRLs")
+
+    with pytest.raises(ssl.SSLCertVerificationError):
+        connect_to_host(host)
