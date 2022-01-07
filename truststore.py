@@ -1,36 +1,28 @@
 """Verify certificates using OS trust stores"""
 
+import os
 import platform
+import socket
 import ssl
 from typing import List, Optional
 
 from _ssl import ENCODING_DER
 
-__all__ = ["verify_peercerts"]
+__all__ = ["Truststore"]
 __version__ = "0.1.0"
-
-
-def _verify_peercerts(
-    certs: List[bytes], server_hostname: Optional[str] = None
-) -> None:
-    ...
 
 
 # ===== macOS =====
 
 if platform.system() == "Darwin":
     import ctypes
-    import ssl
     from ctypes import (
         CDLL,
-        CFUNCTYPE,
         POINTER,
         c_bool,
-        c_byte,
         c_char_p,
         c_int32,
         c_long,
-        c_size_t,
         c_uint32,
         c_ulong,
         c_void_p,
@@ -85,6 +77,7 @@ if platform.system() == "Darwin":
 
     OSStatus = c_int32
 
+    CFErrorRef = POINTER(CFError)
     CFDataRef = POINTER(CFData)
     CFStringRef = POINTER(CFString)
     CFArrayRef = POINTER(CFArray)
@@ -131,6 +124,12 @@ if platform.system() == "Darwin":
             POINTER(SecTrustRef),
         ]
         Security.SecTrustCreateWithCertificates.restype = OSStatus
+
+        Security.SecTrustGetTrustResult.argtypes = [
+            SecTrustRef,
+            POINTER(SecTrustResultType),
+        ]
+        Security.SecTrustGetTrustResult.restype = OSStatus
 
         Security.SecCopyErrorMessageString.argtypes = [OSStatus, c_void_p]
         Security.SecCopyErrorMessageString.restype = CFStringRef
@@ -212,6 +211,12 @@ if platform.system() == "Darwin":
         CoreFoundation.CFArrayGetValueAtIndex.argtypes = [CFArrayRef, CFIndex]
         CoreFoundation.CFArrayGetValueAtIndex.restype = c_void_p
 
+        CoreFoundation.CFErrorGetCode.argtypes = [CFErrorRef]
+        CoreFoundation.CFErrorGetCode.restype = CFIndex
+
+        CoreFoundation.CFErrorCopyDescription.argtypes = [CFErrorRef]
+        CoreFoundation.CFErrorCopyDescription.restype = CFStringRef
+
         CoreFoundation.kCFAllocatorDefault = CFAllocatorRef.in_dll(
             CoreFoundation, "kCFAllocatorDefault"
         )
@@ -229,15 +234,13 @@ if platform.system() == "Darwin":
         CoreFoundation.CFArrayRef = CFArrayRef
         CoreFoundation.CFStringRef = CFStringRef
         CoreFoundation.CFDictionaryRef = CFDictionaryRef
+        CoreFoundation.CFErrorRef = CFErrorRef
 
     except AttributeError:
         raise ImportError("Error initializing ctypes") from None
 
     class CFConst:
-        """
-        A class object that acts as essentially a namespace for CoreFoundation
-        constants.
-        """
+        """CoreFoundation constants"""
 
         kCFStringEncodingUTF8 = CFStringEncoding(0x08000100)
 
@@ -259,39 +262,37 @@ if platform.system() == "Darwin":
         )
         return cf_str
 
-    def _create_cf_string_array(lst: List[bytes]) -> CFMutableArray:
+    def _cf_string_ref_to_str(cf_string_ref: CFStringRef) -> Optional[str]:
         """
-        Given a list of Python binary data, create an associated CFMutableArray.
-        The array must be CFReleased by the caller.
-        Raises an ssl.SSLError on failure.
+        Creates a Unicode string from a CFString object. Used entirely for error
+        reporting.
+        Yes, it annoys me quite a lot that this function is this complex.
         """
-        cf_array = None
-        try:
-            cf_array = CoreFoundation.CFArrayCreateMutable(
-                CoreFoundation.kCFAllocatorDefault,
-                0,
-                ctypes.byref(CoreFoundation.kCFTypeArrayCallBacks),
-            )
-            if not cf_array:
-                raise MemoryError("Unable to allocate memory!")
-            for item in lst:
-                cf_string = _bytes_to_cf_string(item)
-                if not cf_string:
-                    raise MemoryError("Unable to allocate memory!")
-                try:
-                    CoreFoundation.CFArrayAppendValue(cf_array, cf_string)
-                finally:
-                    CoreFoundation.CFRelease(cf_string)
-        except BaseException as e:
-            if cf_array:
-                CoreFoundation.CFRelease(cf_array)
-            raise ssl.SSLError(f"Unable to allocate array: {e}") from None
-        return cf_array
 
-    def _verify_peercerts(cert_chain: List[bytes], server_hostname=None) -> None:
+        string = CoreFoundation.CFStringGetCStringPtr(
+            cf_string_ref, CFConst.kCFStringEncodingUTF8
+        )
+        if string is None:
+            buffer = ctypes.create_string_buffer(1024)
+            result = CoreFoundation.CFStringGetCString(
+                cf_string_ref, buffer, 1024, CFConst.kCFStringEncodingUTF8
+            )
+            if not result:
+                raise OSError("Error copying C string from CFStringRef")
+            string = buffer.value
+        if string is not None:
+            string = string.decode("utf-8")
+        return string  # type: ignore[no-any-return]
+
+    def _configure_context(ctx: ssl.SSLContext):
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+
+    def _verify_peercerts_impl(cert_chain: List[bytes], server_hostname=None) -> None:
         certs = None
         policy = None
         trust = None
+        cf_error = None
         try:
             if server_hostname is not None:
                 cf_str_hostname = None
@@ -327,9 +328,9 @@ if platform.system() == "Darwin":
                         )
                         CoreFoundation.CFArrayAppendValue(certs, cert)
                     finally:
-                        if cf_data is not None:
+                        if cf_data:
                             CoreFoundation.CFRelease(cf_data)
-                        if cert is not None:
+                        if cert:
                             CoreFoundation.CFRelease(cert)
 
                 # Now that we have certificates loaded and a SecPolicy
@@ -346,24 +347,57 @@ if platform.system() == "Darwin":
                 if certs:
                     CoreFoundation.CFRelease(certs)
 
-            # Add the default anchor certificates to the SecTrust
+            # Add only the default anchor certificates to the SecTrust
             status = Security.SecTrustSetAnchorCertificates(trust, None)
             # TODO: Check status
 
-            cf_error = CoreFoundation.CFError()
-            success = Security.SecTrustEvaluateWithError(trust, ctypes.byref(cf_error))
+            cf_error = CoreFoundation.CFErrorRef()
+            sec_trust_eval_result = Security.SecTrustEvaluateWithError(
+                trust, ctypes.byref(cf_error)
+            )
+            # sec_trust_eval_result is a bool (0 or 1)
+            # where 1 means that the certs are trusted.
+            if sec_trust_eval_result == 1:
+                is_trusted = True
+            elif sec_trust_eval_result == 0:
+                is_trusted = False
+            else:
+                raise ssl.SSLError(
+                    f"Unknown result from Security.SecTrustEvaluateWithError: {sec_trust_eval_result!r}"
+                )
+            print("SecTrustEvaluateWithError:", is_trusted, cf_error)
+
+            if not is_trusted:
+                cf_error_code = CoreFoundation.CFErrorGetCode(cf_error)
+                cf_error_string_ref = None
+                try:
+                    cf_error_string_ref = CoreFoundation.CFErrorCopyDescription(
+                        cf_error
+                    )
+                    cf_error_message = _cf_string_ref_to_str(cf_error_string_ref)
+                    # TODO: Not sure if we need the SecTrustResultType for anything?
+                    # We only care whether or not it's a success or failure for now.
+                    # sec_trust_result_type = Security.SecTrustResultType()
+                    # status = Security.SecTrustGetTrustResult(trust, ctypes.byref(sec_trust_result_type))
+                    err = ssl.SSLCertVerificationError()
+                    err.verify_message = cf_error_message
+                    err.verify_code = cf_error_code
+                    raise err
+                finally:
+                    if cf_error_string_ref:
+                        CoreFoundation.CFRelease(cf_error_string_ref)
 
         finally:
-            if policy is not None:
+            if policy:
                 CoreFoundation.CFRelease(policy)
-            if trust is not None:
+            if trust:
                 CoreFoundation.CFRelease(trust)
 
 
 # ===== Windows =====
 
 elif platform.system() == "Windows":
-    pass
+    raise ImportError("Windows is not yet supported")
 
 # ===== Linux =====
 else:
@@ -384,17 +418,54 @@ else:
     ]
 
     _CA_DIRS = [
-        "/etc/ssl/certs",  # SLES10/SLES11
+        "/etc/ssl/certs",  # SLES10/SLES11, FreeBSD 12.2+
         "/etc/pki/tls/certs",  # Fedora/RHEL
         "/system/etc/security/cacerts",  # Android
-        "/etc/ssl/certs",  # FreeBSD 12.2+
         "/usr/local/share/certs",  # FreeBSD
         "/etc/openssl/certs",  # NetBSD
         "/etc/certs/CA",  # Solaris
     ]
 
+    def _configure_context(ctx: ssl.SSLContext):
+        for cafile in _CA_FILES:
+            if os.path.isfile(cafile):
+                ctx.load_verify_locations(cafile=cafile)
+                break
+        else:
+            for cadir in _CA_DIRS:
+                if os.path.isdir(cadir):
+                    ctx.load_verify_locations(capath=cadir)
 
-def verify_peercerts(
+    def _verify_peercerts_impl(
+        cert_chain: List[bytes], server_hostname: Optional[str] = None
+    ):
+        pass
+
+
+class Truststore:
+    def __init__(self):
+        self._ctx = ssl.create_default_context()
+        _configure_context(self._ctx)
+
+    def wrap_socket(self, sock: socket.socket, server_hostname: Optional[str] = None):
+        ssl_sock = self._ctx.wrap_socket(sock, server_hostname=server_hostname)
+        _verify_peercerts(ssl_sock)
+        return ssl_sock
+
+    def wrap_bio(
+        self,
+        incoming: ssl.MemoryBIO,
+        outgoing: ssl.MemoryBIO,
+        server_hostname: Optional[str] = None,
+    ) -> ssl.SSLObject:
+        ssl_obj = self._ctx.wrap_bio(
+            incoming, outgoing, server_hostname=server_hostname
+        )
+        _verify_peercerts(ssl_obj)
+        return ssl_obj
+
+
+def _verify_peercerts(
     sock_or_sslobj: ssl.SSLSocket | ssl.SSLObject, server_hostname: Optional[str] = None
 ) -> None:
     """
@@ -412,4 +483,4 @@ def verify_peercerts(
         )
 
     certs = [cert.public_bytes(ENCODING_DER) for cert in sslobj.get_unverified_chain()]
-    _verify_peercerts(certs, server_hostname=server_hostname)
+    _verify_peercerts_impl(certs, server_hostname=server_hostname)
