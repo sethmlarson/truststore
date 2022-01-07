@@ -24,7 +24,8 @@ def test_success():
 @pytest.mark.parametrize(
     "host",
     [
-        "expired.badssl.com" "wrong.host.badssl.com",
+        "wrong.host.badssl.com",  # Fails on macOS?
+        "expired.badssl.com",
         "self-signed.badssl.com",
         "untrusted-root.badssl.com",
         "revoked.badssl.com",
