@@ -67,11 +67,9 @@ if platform.system() == "Darwin":
     CFString = c_void_p
     CFArray = c_void_p
     CFMutableArray = c_void_p
-    CFDictionary = c_void_p
     CFError = c_void_p
     CFType = c_void_p
     CFTypeID = c_ulong
-
     CFTypeRef = POINTER(CFType)
     CFAllocatorRef = c_void_p
 
@@ -82,10 +80,7 @@ if platform.system() == "Darwin":
     CFStringRef = POINTER(CFString)
     CFArrayRef = POINTER(CFArray)
     CFMutableArrayRef = POINTER(CFMutableArray)
-    CFDictionaryRef = POINTER(CFDictionary)
     CFArrayCallBacks = c_void_p
-    CFDictionaryKeyCallBacks = c_void_p
-    CFDictionaryValueCallBacks = c_void_p
 
     SecCertificateRef = POINTER(c_void_p)
     SecPolicyRef = POINTER(c_void_p)
@@ -94,9 +89,6 @@ if platform.system() == "Darwin":
     SecTrustOptionFlags = c_uint32
 
     try:
-        Security.SecCertificateGetTypeID.argtypes = []
-        Security.SecCertificateGetTypeID.restype = CFTypeID
-
         Security.SecCertificateCreateWithData.argtypes = [CFAllocatorRef, CFDataRef]
         Security.SecCertificateCreateWithData.restype = SecCertificateRef
 
@@ -138,9 +130,6 @@ if platform.system() == "Darwin":
         Security.SecTrustResultType = SecTrustResultType
         Security.OSStatus = OSStatus
 
-        CoreFoundation.CFRetain.argtypes = [CFTypeRef]
-        CoreFoundation.CFRetain.restype = CFTypeRef
-
         CoreFoundation.CFRelease.argtypes = [CFTypeRef]
         CoreFoundation.CFRelease.restype = None
 
@@ -173,19 +162,6 @@ if platform.system() == "Darwin":
 
         CoreFoundation.CFDataGetBytePtr.argtypes = [CFDataRef]
         CoreFoundation.CFDataGetBytePtr.restype = c_void_p
-
-        CoreFoundation.CFDictionaryCreate.argtypes = [
-            CFAllocatorRef,
-            POINTER(CFTypeRef),
-            POINTER(CFTypeRef),
-            CFIndex,
-            CFDictionaryKeyCallBacks,
-            CFDictionaryValueCallBacks,
-        ]
-        CoreFoundation.CFDictionaryCreate.restype = CFDictionaryRef
-
-        CoreFoundation.CFDictionaryGetValue.argtypes = [CFDictionaryRef, CFTypeRef]
-        CoreFoundation.CFDictionaryGetValue.restype = CFTypeRef
 
         CoreFoundation.CFArrayCreate.argtypes = [
             CFAllocatorRef,
@@ -223,17 +199,10 @@ if platform.system() == "Darwin":
         CoreFoundation.kCFTypeArrayCallBacks = c_void_p.in_dll(
             CoreFoundation, "kCFTypeArrayCallBacks"
         )
-        CoreFoundation.kCFTypeDictionaryKeyCallBacks = c_void_p.in_dll(
-            CoreFoundation, "kCFTypeDictionaryKeyCallBacks"
-        )
-        CoreFoundation.kCFTypeDictionaryValueCallBacks = c_void_p.in_dll(
-            CoreFoundation, "kCFTypeDictionaryValueCallBacks"
-        )
 
         CoreFoundation.CFTypeRef = CFTypeRef
         CoreFoundation.CFArrayRef = CFArrayRef
         CoreFoundation.CFStringRef = CFStringRef
-        CoreFoundation.CFDictionaryRef = CFDictionaryRef
         CoreFoundation.CFErrorRef = CFErrorRef
 
     except AttributeError:
@@ -339,7 +308,7 @@ if platform.system() == "Darwin":
                 status = Security.SecTrustCreateWithCertificates(
                     certs, policy, ctypes.byref(trust)
                 )
-                # TODO: Check status
+                assert status == 0  # TODO: Check status
 
             finally:
                 # The certs are now being held by SecTrust so we can
@@ -349,7 +318,9 @@ if platform.system() == "Darwin":
 
             # Add only the default anchor certificates to the SecTrust
             status = Security.SecTrustSetAnchorCertificates(trust, None)
-            # TODO: Check status
+            assert status == 0  # TODO: Check status
+            status = Security.SecTrustSetAnchorCertificatesOnly(trust, True)
+            assert status == 0  # TODO: Check status
 
             cf_error = CoreFoundation.CFErrorRef()
             sec_trust_eval_result = Security.SecTrustEvaluateWithError(
@@ -365,7 +336,6 @@ if platform.system() == "Darwin":
                 raise ssl.SSLError(
                     f"Unknown result from Security.SecTrustEvaluateWithError: {sec_trust_eval_result!r}"
                 )
-            print("SecTrustEvaluateWithError:", is_trusted, cf_error)
 
             if not is_trusted:
                 cf_error_code = CoreFoundation.CFErrorGetCode(cf_error)
@@ -375,10 +345,15 @@ if platform.system() == "Darwin":
                         cf_error
                     )
                     cf_error_message = _cf_string_ref_to_str(cf_error_string_ref)
+
                     # TODO: Not sure if we need the SecTrustResultType for anything?
                     # We only care whether or not it's a success or failure for now.
-                    # sec_trust_result_type = Security.SecTrustResultType()
-                    # status = Security.SecTrustGetTrustResult(trust, ctypes.byref(sec_trust_result_type))
+                    sec_trust_result_type = Security.SecTrustResultType()
+                    status = Security.SecTrustGetTrustResult(
+                        trust, ctypes.byref(sec_trust_result_type)
+                    )
+                    assert status == 0  # TODO: Check status
+
                     err = ssl.SSLCertVerificationError()
                     err.verify_message = cf_error_message
                     err.verify_code = cf_error_code
