@@ -1,0 +1,15 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "truststore"
+authors = [{name = "Seth Michael Larson", email = "sethmichaellarson@gmail.com"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: MIT License"]
+dynamic = ["version", "description"]
+requires-python = ">= 3.10"
+
+[project.urls]
+Home = "https://github.com/sethmlarson/truststore"

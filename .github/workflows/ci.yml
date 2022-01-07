@@ -1,0 +1,27 @@
+name: CI
+
+on: [push, pull_request]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    os: 
+    runs-on: macos-latest
+    name: macOS
+    continue-on-error: false
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set Up Python 3.10
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Run tests
+        run: python test.py
