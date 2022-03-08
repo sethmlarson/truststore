@@ -410,6 +410,7 @@ else:
             for cadir in _CA_DIRS:
                 if os.path.isdir(cadir):
                     ctx.load_verify_locations(capath=cadir)
+
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_REQUIRED
 
@@ -419,9 +420,12 @@ else:
         pass
 
 
-class Truststore:
-    def __init__(self):
+class TruststoreSSLContext:
+    """SSLContext API that uses system certificates on all platforms"""
+
+    def __init__(self, ignore_certifi_certs: bool = True):
         self._ctx = ssl.create_default_context()
+        self._ignore_certifi_certs = ignore_certifi_certs
         _configure_context(self._ctx)
 
     def wrap_socket(self, sock: socket.socket, server_hostname: Optional[str] = None):
@@ -438,12 +442,15 @@ class Truststore:
         ssl_obj = self._ctx.wrap_bio(
             incoming, outgoing, server_hostname=server_hostname
         )
-        _verify_peercerts(ssl_obj)
+        _verify_peercerts(ssl_obj, server_hostname=server_hostname)
         return ssl_obj
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._ctx, name)
 
 
 def _verify_peercerts(
-    sock_or_sslobj: ssl.SSLSocket | ssl.SSLObject, server_hostname: Optional[str] = None
+    sock_or_sslobj: ssl.SSLSocket | ssl.SSLObject, server_hostname: Optional[str]
 ) -> None:
     """
     Verifies the peer certificates from an SSLSocket or SSLObject
@@ -459,14 +466,14 @@ def _verify_peercerts(
             "Must either pass a single 'socket.socket' or two 'ssl.MemoryBIO'"
         )
 
-    if server_hostname is not None:
-        cert_infos = [x.get_info() for x in sslobj.get_verified_chain()]
-        _match_hostname(hostname=server_hostname, cert=cert_infos[0])
-
     cert_bytes = [
         cert.public_bytes(ENCODING_DER) for cert in sslobj.get_unverified_chain()
     ]
     _verify_peercerts_impl(cert_bytes, server_hostname=server_hostname)
+
+    if server_hostname is not None:
+        cert_infos = [x.get_info() for x in sslobj.get_verified_chain()]
+        _match_hostname(hostname=server_hostname, cert=cert_infos[0])
 
 
 def _dnsname_match(
