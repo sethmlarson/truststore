@@ -15,6 +15,17 @@ from truststore import TruststoreSSLContext
 sock = socket.create_connection(("example.com", 443))
 ctx = TruststoreSSLContext()
 sock = ctx.wrap_socket(sock, server_hostname="example.com")
+
+# Also works with libraries that accept an SSLContext object
+import urllib3
+
+http = urllib3.PoolManager(ssl_context=ctx)
+http.request("GET", "https://example.com")
+
+import aiohttp
+
+http = aiohttp.ClientSession()
+http.request("GET", "https://example.com", ssl=ctx)
 ```
 
 ## Platforms

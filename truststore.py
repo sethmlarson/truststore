@@ -13,6 +13,14 @@ from _ssl import ENCODING_DER
 __all__ = ["Truststore"]
 __version__ = "0.1.0"
 
+try:
+    # Grab this value so we know which paths to ignore.
+    import certifi
+
+    _CERTIFI_WHERE = certifi.where()
+except ImportError:
+    _CERTIFI_WHERE = None
+
 
 # ===== macOS =====
 
@@ -420,12 +428,26 @@ else:
         pass
 
 
-class TruststoreSSLContext:
+class TruststoreSSLContext(ssl.SSLContext):
     """SSLContext API that uses system certificates on all platforms"""
 
-    def __init__(self, ignore_certifi_certs: bool = True):
+    def __init__(self):
         self._ctx = ssl.create_default_context()
-        self._ignore_certifi_certs = ignore_certifi_certs
+
+        class TruststoreSSLObject(ssl.SSLObject):
+            # This object exists because wrap_bio() doesn't
+            # immediately do the handshake so we need to do
+            # certificate verifications after SSLObject.do_handshake()
+            _TRUSTSTORE_SERVER_HOSTNAME = None
+
+            def do_handshake(self) -> None:
+                ret = super().do_handshake()
+                _verify_peercerts(
+                    self, server_hostname=self._TRUSTSTORE_SERVER_HOSTNAME
+                )
+                return ret
+
+        self._ctx.sslobject_class = TruststoreSSLObject
         _configure_context(self._ctx)
 
     def wrap_socket(self, sock: socket.socket, server_hostname: Optional[str] = None):
@@ -438,12 +460,30 @@ class TruststoreSSLContext:
         incoming: ssl.MemoryBIO,
         outgoing: ssl.MemoryBIO,
         server_hostname: Optional[str] = None,
+        server_side: bool = False,
     ) -> ssl.SSLObject:
+
+        # Super hacky way of passing the server_hostname value forward to sslobject_class.
+        self._ctx.sslobject_class._TRUSTSTORE_SERVER_HOSTNAME = server_hostname
         ssl_obj = self._ctx.wrap_bio(
-            incoming, outgoing, server_hostname=server_hostname
+            incoming, outgoing, server_hostname=server_hostname, server_side=server_side
         )
-        _verify_peercerts(ssl_obj, server_hostname=server_hostname)
         return ssl_obj
+
+    def load_verify_locations(
+        self, cafile=None, capath=None, cadata: str | bytes | None = ...
+    ) -> None:
+        # Ignore certifi.where() being used as a default, otherwise we raise an error.
+        if (
+            _CERTIFI_WHERE
+            and cafile == _CERTIFI_WHERE
+            or capath == _CERTIFI_WHERE
+            and not cadata
+        ):
+            return
+        raise NotImplementedError(
+            "TruststoreSSLContext.load_verify_locations() isn't implemented"
+        )
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._ctx, name)
@@ -456,15 +496,12 @@ def _verify_peercerts(
     Verifies the peer certificates from an SSLSocket or SSLObject
     against the certificates in the OS trust store.
     """
-    sslobj: ssl.SSLObject
-    if isinstance(sock_or_sslobj, ssl.SSLSocket):
-        sslobj = sock_or_sslobj._sslobj
-    elif isinstance(sock_or_sslobj, ssl.SSLObject):
-        sslobj = sock_or_sslobj
-    else:
-        raise TypeError(
-            "Must either pass a single 'socket.socket' or two 'ssl.MemoryBIO'"
-        )
+    sslobj: ssl.SSLObject = sock_or_sslobj
+    try:
+        while not hasattr(sslobj, "get_unverified_chain"):
+            sslobj = sslobj._sslobj
+    except AttributeError:
+        pass
 
     cert_bytes = [
         cert.public_bytes(ENCODING_DER) for cert in sslobj.get_unverified_chain()
@@ -472,8 +509,12 @@ def _verify_peercerts(
     _verify_peercerts_impl(cert_bytes, server_hostname=server_hostname)
 
     if server_hostname is not None:
-        cert_infos = [x.get_info() for x in sslobj.get_verified_chain()]
-        _match_hostname(hostname=server_hostname, cert=cert_infos[0])
+        # SSLObject.get_verified_chain()[0].get_info() isn't the same as .getpeercert()
+        # as .getpeercert() is None when verify_mode=CERT_NONE whereas get_verified_chain()
+        # always returns the peers certificate decoded.
+        _match_hostname(
+            cert=sslobj.get_verified_chain()[0].get_info(), hostname=server_hostname
+        )
 
 
 def _dnsname_match(

@@ -1,0 +1,4 @@
+aiohttp
+pytest
+pytest-asyncio
+urllib3
