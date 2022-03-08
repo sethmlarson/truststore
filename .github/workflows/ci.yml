@@ -28,5 +28,5 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m pip install pytest
+          python -m pip install pytest urllib3
           pytest test_truststore.py

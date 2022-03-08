@@ -1,10 +1,8 @@
-# Native OS trust stores in Python
+# truststore
 
 [![CI](https://github.com/sethmlarson/python-truststore/actions/workflows/ci.yml/badge.svg)](https://github.com/sethmlarson/python-truststore/actions/workflows/ci.yml)
 
-Verify peer certificates using OS trust stores. Supports macOS, Windows, and Linux+OpenSSL. This
-
-**This project should be considered experimental.**
+Verify certificates using OS trust stores. Supports macOS, Windows, and Linux (with OpenSSL). **This project should be considered experimental.**
 
 ## Usage
 
@@ -12,11 +10,11 @@ Verify peer certificates using OS trust stores. Supports macOS, Windows, and Lin
 # The following code works on Linux and macOS without other dependencies.
 
 import socket
-from truststore import Truststore
+from truststore import TruststoreSSLContext
 
 sock = socket.create_connection(("example.com", 443))
-ts = Truststore()
-sock = ts.wrap_socket(sock, server_hostname="example.com")
+ctx = TruststoreSSLContext()
+sock = ctx.wrap_socket(sock, server_hostname="example.com")
 ```
 
 ## Platforms
