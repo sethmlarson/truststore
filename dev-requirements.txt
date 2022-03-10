@@ -1,4 +1,5 @@
 aiohttp
+certifi
 pytest
 pytest-asyncio
 urllib3

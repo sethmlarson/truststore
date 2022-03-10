@@ -1,6 +1,6 @@
-# truststore
+# Truststore
 
-[![CI](https://github.com/sethmlarson/python-truststore/actions/workflows/ci.yml/badge.svg)](https://github.com/sethmlarson/python-truststore/actions/workflows/ci.yml)
+[![CI](https://github.com/sethmlarson/truststore/actions/workflows/ci.yml/badge.svg)](https://github.com/sethmlarson/truststore/actions/workflows/ci.yml)
 
 Verify certificates using OS trust stores. Supports macOS, Windows, and Linux (with OpenSSL). **This project should be considered experimental.**
 
@@ -25,7 +25,7 @@ http.request("GET", "https://example.com")
 import aiohttp
 
 http = aiohttp.ClientSession()
-http.request("GET", "https://example.com", ssl=ctx)
+await http.request("GET", "https://example.com", ssl=ctx)
 ```
 
 ## Platforms

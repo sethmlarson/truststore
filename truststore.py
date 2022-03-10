@@ -6,15 +6,15 @@ import platform
 import re
 import socket
 import ssl
-from typing import Any, Dict, List, Match, Optional, Tuple, Union
+from typing import Any, List, Match, Optional, Tuple, Union
 
 from _ssl import ENCODING_DER
 
-__all__ = ["Truststore"]
+__all__ = ["TruststoreSSLContext"]
 __version__ = "0.1.0"
 
 try:
-    # Grab this value so we know which paths to ignore.
+    # Grab this value so we know which path we can ignore.
     import certifi
 
     _CERTIFI_WHERE = certifi.where()
@@ -431,8 +431,9 @@ else:
 class TruststoreSSLContext(ssl.SSLContext):
     """SSLContext API that uses system certificates on all platforms"""
 
-    def __init__(self):
-        self._ctx = ssl.create_default_context()
+    def __init__(self, protocol: int = None):
+        self._ctx = ssl.SSLContext(protocol)
+        _configure_context(self._ctx)
 
         class TruststoreSSLObject(ssl.SSLObject):
             # This object exists because wrap_bio() doesn't
@@ -448,7 +449,6 @@ class TruststoreSSLContext(ssl.SSLContext):
                 return ret
 
         self._ctx.sslobject_class = TruststoreSSLObject
-        _configure_context(self._ctx)
 
     def wrap_socket(self, sock: socket.socket, server_hostname: Optional[str] = None):
         ssl_sock = self._ctx.wrap_socket(sock, server_hostname=server_hostname)
@@ -476,9 +476,9 @@ class TruststoreSSLContext(ssl.SSLContext):
         # Ignore certifi.where() being used as a default, otherwise we raise an error.
         if (
             _CERTIFI_WHERE
-            and cafile == _CERTIFI_WHERE
-            or capath == _CERTIFI_WHERE
             and not cadata
+            and (cafile is None or cafile == _CERTIFI_WHERE)
+            and (capath is None or capath == _CERTIFI_WHERE)
         ):
             return
         raise NotImplementedError(
