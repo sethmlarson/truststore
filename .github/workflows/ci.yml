@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-latest, windows-latest, ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
     name: ${{ fromJson('{"macos-latest":"macOS","windows-latest":"Windows","ubuntu-latest":"Ubuntu"}')[matrix.os] }}
@@ -28,5 +28,5 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m pip install -r dev-requirements.txt
-          pytest test_truststore.py
+          python -m pip install nox
+          nox -s test
