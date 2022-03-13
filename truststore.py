@@ -510,6 +510,7 @@ elif platform.system() == "Windows":
             ("dwFlags", DWORD),
             ("pvExtraPolicyPara", c_void_p),
         )
+    PCERT_CHAIN_POLICY_PARA = POINTER(CERT_CHAIN_POLICY_PARA)
 
     class CERT_CHAIN_POLICY_STATUS(Structure):
         _fields_ = (
@@ -519,8 +520,6 @@ elif platform.system() == "Windows":
             ("lElementIndex", LONG),
             ("pvExtraPolicyStatus", c_void_p),
         )
-
-    PCERT_CHAIN_POLICY_PARA = POINTER(CERT_CHAIN_POLICY_PARA)
     PCERT_CHAIN_POLICY_STATUS = POINTER(CERT_CHAIN_POLICY_STATUS)
 
     X509_ASN_ENCODING = 0x00000001
@@ -528,6 +527,7 @@ elif platform.system() == "Windows":
     CERT_STORE_PROV_MEMORY = b"Memory"
     USAGE_MATCH_TYPE_OR = 1
     OID_PKIX_KP_SERVER_AUTH = c_char_p(b"1.3.6.1.5.5.7.3.1")
+    CERT_CHAIN_REVOCATION_CHECK_CHAIN = 0x20000000
     AUTHTYPE_SERVER = 2
     CERT_CHAIN_POLICY_SSL = 4
 
@@ -610,7 +610,6 @@ elif platform.system() == "Windows":
             )
 
             # Chain params to match certs for serverAuth extended usage
-            # TODO: check cert revocation
             cert_enhkey_usage = CERT_ENHKEY_USAGE()
             cert_enhkey_usage.cUsageIdentifier = 1
             cert_enhkey_usage.rgpszUsageIdentifier = (c_char_p * 1)(OID_PKIX_KP_SERVER_AUTH)
@@ -629,7 +628,7 @@ elif platform.system() == "Windows":
                 None,  # current system time
                 None, # hStore,  # additional in-memory cert store
                 pChainPara,  # chain-building parameters
-                0,  # flags
+                CERT_CHAIN_REVOCATION_CHECK_CHAIN,  # flags
                 None,  # reserved
                 ppChainContext,  # the resulting chain context
             )
