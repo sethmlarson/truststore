@@ -279,12 +279,12 @@ if platform.system() == "Darwin":
                     cf_str_hostname = _bytes_to_cf_string(
                         server_hostname.encode("ascii")
                     )
-                    policy = Security.SecPolicyCreateSSL(False, cf_str_hostname)
+                    policy = Security.SecPolicyCreateSSL(True, cf_str_hostname)
                 finally:
                     if cf_str_hostname:
                         CoreFoundation.CFRelease(cf_str_hostname)
             else:
-                policy = Security.SecPolicyCreateSSL(False, None)
+                policy = Security.SecPolicyCreateSSL(True, None)
 
             certs = None
             try:
