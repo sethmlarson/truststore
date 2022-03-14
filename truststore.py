@@ -11,7 +11,7 @@ from typing import Any, List, Match, Optional, Tuple, Union
 from _ssl import ENCODING_DER
 
 __all__ = ["TruststoreSSLContext"]
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 try:
     # Grab this value so we know which path we can ignore.
