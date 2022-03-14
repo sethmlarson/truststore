@@ -33,6 +33,7 @@ await http.request("GET", "https://example.com", ssl=ctx)
 Works in the following configurations:
 
 - macOS 10.8+ using Python 3.10+ (via [Security framework](https://developer.apple.com/documentation/security))
+- Windows using Python 3.10+ (via [CryptoAPI](https://docs.microsoft.com/en-us/windows/win32/seccrypto/cryptography-functions#certificate-verification-functions))
 - Linux using any Python version
 
 ## Prior art
