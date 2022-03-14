@@ -525,6 +525,7 @@ elif platform.system() == "Windows":
     X509_ASN_ENCODING = 0x00000001
     PKCS_7_ASN_ENCODING = 0x00010000
     CERT_STORE_PROV_MEMORY = b"Memory"
+    CERT_STORE_ADD_USE_EXISTING = 2
     USAGE_MATCH_TYPE_OR = 1
     OID_PKIX_KP_SERVER_AUTH = c_char_p(b"1.3.6.1.5.5.7.3.1")
     CERT_CHAIN_REVOCATION_CHECK_CHAIN = 0x20000000
@@ -536,7 +537,6 @@ elif platform.system() == "Windows":
     def _handle_win_error(result, func, args):
         if not result:
             # Note, actually raises OSError after calling GetLastError and FormatMessage
-            # TODO: Wrap in ssl.SSLCertVerificationError?
             raise WinError()
         return args
 
@@ -598,11 +598,21 @@ elif platform.system() == "Windows":
     def _verify_peercerts_impl(
         cert_chain: List[bytes], server_hostname: Optional[str] = None
     ):
-        # TODO: Test with intermediate certs; add them to in-memory cert store
         pCertContext = None
         ppChainContext = None
-        # hStore = CertOpenStore(CERT_STORE_PROV_MEMORY, 0, None, 0, None)
+        hStore = CertOpenStore(CERT_STORE_PROV_MEMORY, 0, None, 0, None)
         try:
+            # Add intermediate certs to store
+            for cert_bytes in cert_chain[1:]:
+                CertAddEncodedCertificateToStore(
+                    hStore,
+                    X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
+                    cert_bytes,
+                    len(cert_bytes),
+                    CERT_STORE_ADD_USE_EXISTING,
+                    None
+                )
+
             # Cert context for leaf cert
             leaf_cert = cert_chain[0]
             pCertContext = CertCreateCertificateContext(
@@ -626,7 +636,7 @@ elif platform.system() == "Windows":
                 None,  # default chain engine
                 pCertContext,  # leaf cert context
                 None,  # current system time
-                None, # hStore,  # additional in-memory cert store
+                hStore,  # additional in-memory cert store
                 pChainPara,  # chain-building parameters
                 CERT_CHAIN_REVOCATION_CHECK_CHAIN,  # flags
                 None,  # reserved
@@ -663,7 +673,7 @@ elif platform.system() == "Windows":
                 err.verify_code = error_code
                 raise err
         finally:
-            # result = CertCloseStore(hStore, 0)
+            result = CertCloseStore(hStore, 0)
             if ppChainContext:
                 CertFreeCertificateChain(ppChainContext.contents)
             if pCertContext:
