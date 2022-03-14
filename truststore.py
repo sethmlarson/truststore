@@ -386,11 +386,11 @@ elif platform.system() == "Windows":
         Structure,
         WinDLL,
         WinError,
-        cast,
         c_char_p,
         c_ulong,
         c_void_p,
         c_wchar_p,
+        cast,
         pointer,
         sizeof,
     )
@@ -504,12 +504,14 @@ elif platform.system() == "Windows":
             ("fdwChecks", DWORD),
             ("pwszServerName", LPCWSTR),
         )
+
     class CERT_CHAIN_POLICY_PARA(Structure):
         _fields_ = (
             ("cbSize", DWORD),
             ("dwFlags", DWORD),
             ("pvExtraPolicyPara", c_void_p),
         )
+
     PCERT_CHAIN_POLICY_PARA = POINTER(CERT_CHAIN_POLICY_PARA)
 
     class CERT_CHAIN_POLICY_STATUS(Structure):
@@ -520,6 +522,7 @@ elif platform.system() == "Windows":
             ("lElementIndex", LONG),
             ("pvExtraPolicyStatus", c_void_p),
         )
+
     PCERT_CHAIN_POLICY_STATUS = POINTER(CERT_CHAIN_POLICY_STATUS)
 
     X509_ASN_ENCODING = 0x00000001
@@ -610,7 +613,7 @@ elif platform.system() == "Windows":
                     cert_bytes,
                     len(cert_bytes),
                     CERT_STORE_ADD_USE_EXISTING,
-                    None
+                    None,
                 )
 
             # Cert context for leaf cert
@@ -622,7 +625,9 @@ elif platform.system() == "Windows":
             # Chain params to match certs for serverAuth extended usage
             cert_enhkey_usage = CERT_ENHKEY_USAGE()
             cert_enhkey_usage.cUsageIdentifier = 1
-            cert_enhkey_usage.rgpszUsageIdentifier = (c_char_p * 1)(OID_PKIX_KP_SERVER_AUTH)
+            cert_enhkey_usage.rgpszUsageIdentifier = (c_char_p * 1)(
+                OID_PKIX_KP_SERVER_AUTH
+            )
             cert_usage_match = CERT_USAGE_MATCH()
             cert_usage_match.Usage = cert_enhkey_usage
             chain_params = CERT_CHAIN_PARA()
@@ -646,13 +651,19 @@ elif platform.system() == "Windows":
 
             # Verify cert chain
             ssl_extra_cert_chain_policy_para = SSL_EXTRA_CERT_CHAIN_POLICY_PARA()
-            ssl_extra_cert_chain_policy_para.cbSize = sizeof(ssl_extra_cert_chain_policy_para)
+            ssl_extra_cert_chain_policy_para.cbSize = sizeof(
+                ssl_extra_cert_chain_policy_para
+            )
             ssl_extra_cert_chain_policy_para.dwAuthType = AUTHTYPE_SERVER
             ssl_extra_cert_chain_policy_para.fdwChecks = 0
             if server_hostname:
-                ssl_extra_cert_chain_policy_para.pwszServerName = c_wchar_p(server_hostname)
+                ssl_extra_cert_chain_policy_para.pwszServerName = c_wchar_p(
+                    server_hostname
+                )
             chain_policy = CERT_CHAIN_POLICY_PARA()
-            chain_policy.pvExtraPolicyPara = cast(pointer(ssl_extra_cert_chain_policy_para), c_void_p)
+            chain_policy.pvExtraPolicyPara = cast(
+                pointer(ssl_extra_cert_chain_policy_para), c_void_p
+            )
             chain_policy.cbSize = sizeof(chain_policy)
             pPolicyPara = pointer(chain_policy)
             policy_status = CERT_CHAIN_POLICY_STATUS()
@@ -673,7 +684,7 @@ elif platform.system() == "Windows":
                 err.verify_code = error_code
                 raise err
         finally:
-            result = CertCloseStore(hStore, 0)
+            CertCloseStore(hStore, 0)
             if ppChainContext:
                 CertFreeCertificateChain(ppChainContext.contents)
             if pCertContext:
