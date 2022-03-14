@@ -10,10 +10,11 @@ Verify certificates using OS trust stores. Supports macOS, Windows, and Linux (w
 # The following code works on Linux and macOS without other dependencies.
 
 import socket
+import ssl
 from truststore import TruststoreSSLContext
 
 sock = socket.create_connection(("example.com", 443))
-ctx = TruststoreSSLContext()
+ctx = TruststoreSSLContext(ssl.PROTOCOL_TLS_CLIENT)
 sock = ctx.wrap_socket(sock, server_hostname="example.com")
 
 # Also works with libraries that accept an SSLContext object
