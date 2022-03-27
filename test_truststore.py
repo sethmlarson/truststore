@@ -54,6 +54,9 @@ def test_failures(host):
 
 @successful_hosts
 def test_sslcontext_api_success(host):
+    if host == "1.1.1.1":
+        pytest.skip("urllib3 doesn't pass server_hostname for IP addresses")
+
     ctx = TruststoreSSLContext(ssl.PROTOCOL_TLS_CLIENT)
     http = urllib3.PoolManager(ssl_context=ctx)
     resp = http.request("GET", f"https://{host}")
