@@ -22,7 +22,7 @@ from ctypes.wintypes import (
     LPFILETIME,
     LPSTR,
 )
-from typing import Any, List, Optional
+from typing import Any
 
 HCERTCHAINENGINE = HANDLE
 HCERTSTORE = HANDLE
@@ -240,7 +240,7 @@ CertFreeCertificateContext.argtypes = (PCERT_CONTEXT,)
 
 
 def _verify_peercerts_impl(
-    cert_chain: List[bytes], server_hostname: Optional[str] = None
+    cert_chain: list[bytes], server_hostname: str | None = None
 ) -> None:
     pCertContext = None
     ppChainContext = None
