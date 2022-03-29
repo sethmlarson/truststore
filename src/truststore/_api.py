@@ -2,7 +2,7 @@ import os
 import platform
 import socket
 import ssl
-from typing import Any, Optional
+from typing import Any
 
 from _ssl import ENCODING_DER  # type: ignore[import]
 
@@ -14,7 +14,7 @@ else:
     from ._openssl import _configure_context, _verify_peercerts_impl
 
 
-_CERTIFI_WHERE: Optional[str]
+_CERTIFI_WHERE: str | None
 try:
     from certifi import where
 
@@ -51,8 +51,8 @@ class TruststoreSSLContext(ssl.SSLContext):
         server_side: bool = False,
         do_handshake_on_connect: bool = True,
         suppress_ragged_eofs: bool = True,
-        server_hostname: Optional[str] = None,
-        session: Optional[ssl.SSLSession] = None,
+        server_hostname: str | None = None,
+        session: ssl.SSLSession | None = None,
     ) -> ssl.SSLSocket:
         ssl_sock = self._ctx.wrap_socket(
             sock,
@@ -70,10 +70,9 @@ class TruststoreSSLContext(ssl.SSLContext):
         incoming: ssl.MemoryBIO,
         outgoing: ssl.MemoryBIO,
         server_side: bool = False,
-        server_hostname: Optional[str] = None,
-        session: Optional[ssl.SSLSession] = None,
+        server_hostname: str | None = None,
+        session: ssl.SSLSession | None = None,
     ) -> ssl.SSLObject:
-
         # Super hacky way of passing the server_hostname value forward to sslobject_class.
         self._ctx.sslobject_class._TRUSTSTORE_SERVER_HOSTNAME = server_hostname  # type: ignore[attr-defined]
         ssl_obj = self._ctx.wrap_bio(
@@ -108,7 +107,7 @@ class TruststoreSSLContext(ssl.SSLContext):
 
 
 def _verify_peercerts(
-    sock_or_sslobj: ssl.SSLSocket | ssl.SSLObject, server_hostname: Optional[str]
+    sock_or_sslobj: ssl.SSLSocket | ssl.SSLObject, server_hostname: str | None
 ) -> None:
     """
     Verifies the peer certificates from an SSLSocket or SSLObject

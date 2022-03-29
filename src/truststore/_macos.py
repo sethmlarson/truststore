@@ -13,7 +13,6 @@ from ctypes import (
     c_void_p,
 )
 from ctypes.util import find_library
-from typing import List, Optional
 
 _mac_version = platform.mac_ver()[0]
 _mac_version_info = tuple(map(int, _mac_version.split(".")))
@@ -28,7 +27,7 @@ def _load_cdll(name: str, macos10_16_path: str) -> CDLL:
     try:
         # Big Sur is technically 11 but we use 10.16 due to the Big Sur
         # beta being labeled as 10.16.
-        path: Optional[str]
+        path: str | None
         if _mac_version_info >= (10, 16):
             path = macos10_16_path
         else:
@@ -223,7 +222,7 @@ def _bytes_to_cf_string(value: bytes) -> CFString:
     return cf_str  # type: ignore[no-any-return]
 
 
-def _cf_string_ref_to_str(cf_string_ref: CFStringRef) -> Optional[str]:  # type: ignore[valid-type]
+def _cf_string_ref_to_str(cf_string_ref: CFStringRef) -> str | None:  # type: ignore[valid-type]
     """
     Creates a Unicode string from a CFString object. Used entirely for error
     reporting.
@@ -252,7 +251,7 @@ def _configure_context(ctx: ssl.SSLContext) -> None:
 
 
 def _verify_peercerts_impl(
-    cert_chain: List[bytes], server_hostname: Optional[str] = None
+    cert_chain: list[bytes], server_hostname: str | None = None
 ) -> None:
     certs = None
     policy = None

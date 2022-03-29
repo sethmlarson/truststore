@@ -1,6 +1,5 @@
 import os
 import ssl
-from typing import List, Optional
 
 _CA_FILES = [
     "/etc/ssl/certs/ca-certificates.crt",  # Debian/Ubuntu/Gentoo etc.
@@ -43,6 +42,6 @@ def _configure_context(ctx: ssl.SSLContext) -> None:
 
 
 def _verify_peercerts_impl(
-    cert_chain: List[bytes], server_hostname: Optional[str] = None
+    cert_chain: list[bytes], server_hostname: str | None = None
 ) -> None:
     pass
