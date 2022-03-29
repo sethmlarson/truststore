@@ -33,19 +33,20 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
+        python-version: ["3.10", "3.11-dev"]
 
     runs-on: ${{ matrix.os }}
-    name: ${{ fromJson('{"macos-latest":"macOS","windows-latest":"Windows","ubuntu-latest":"Ubuntu"}')[matrix.os] }}
+    name: ${{ fromJson('{"macos-latest":"macOS","windows-latest":"Windows","ubuntu-latest":"Ubuntu"}')[matrix.os] }} Python ${{ matrix.python-version }}
     continue-on-error: false
     timeout-minutes: 10
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
 
-      - name: Set Up Python 3.10
+      - name: Set Up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
-          python-version: "3.10"
+          python-version: ${{ matrix.python-version }}
 
       - name: Run tests
         run: |
