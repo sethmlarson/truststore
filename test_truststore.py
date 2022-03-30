@@ -5,6 +5,7 @@ import ssl
 import aiohttp
 import aiohttp.client_exceptions
 import pytest
+import trustme
 import urllib3
 import urllib3.exceptions
 
@@ -27,6 +28,27 @@ failure_hosts = pytest.mark.parametrize(
     "host",
     failure_hosts_list,
 )
+
+
+@pytest.fixture(scope="session")
+def trustme_ca():
+    if platform.system() == "Windows":
+        pytest.skip("Windows doesn't implement custom CA certificates yet")
+    ca = trustme.CA()
+    yield ca
+
+
+@pytest.fixture(scope="session")
+def httpserver_listen_address():
+    return ("localhost", 8080)
+
+
+@pytest.fixture(scope="session")
+def httpserver_ssl_context(trustme_ca):
+    server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    server_cert = trustme_ca.issue_cert("localhost")
+    server_cert.configure_cert(server_context)
+    return server_context
 
 
 def connect_to_host(host: str, use_server_hostname: bool = True):
@@ -102,3 +124,25 @@ async def test_sslcontext_api_failures_async(host):
             await http.request("GET", f"https://{host}", ssl=ctx)
 
     assert "cert" in repr(e.value).lower() and "verif" in repr(e.value).lower()
+
+
+def test_trustme_cert(trustme_ca, httpserver):
+    ctx = TruststoreSSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    trustme_ca.configure_trust(ctx)
+
+    httpserver.expect_request("/", method="GET").respond_with_json({})
+
+    http = urllib3.PoolManager(ssl_context=ctx)
+    resp = http.request("GET", "https://localhost:8080")
+    assert resp.status == 200
+    assert len(resp.data) > 0
+
+
+def test_trustme_cert_still_uses_system_certs(trustme_ca):
+    ctx = TruststoreSSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    trustme_ca.configure_trust(ctx)
+
+    http = urllib3.PoolManager(ssl_context=ctx)
+    resp = http.request("GET", "https://example.com")
+    assert resp.status == 200
+    assert len(resp.data) > 0
