@@ -6,7 +6,7 @@ SOURCE_PATHS = glob.glob("*.py") + ["src/"]
 SOURCE_FILES = glob.glob("*.py") + glob.glob("src/**/*.py", recursive=True)
 
 
-@nox.session(python="3.10")
+@nox.session
 def format(session):
     session.install("black", "isort", "pyupgrade")
     session.run("black", *SOURCE_PATHS)
@@ -18,7 +18,7 @@ def format(session):
     lint(session)
 
 
-@nox.session(python="3.10")
+@nox.session
 def lint(session):
     session.install("black", "isort", "flake8", "mypy", "types-certifi")
     session.run("flake8", "--ignore=E501,W503", *SOURCE_PATHS)
@@ -27,7 +27,7 @@ def lint(session):
     session.run("mypy", "--strict", "--show-error-codes", "src/")
 
 
-@nox.session(python="3.10")
+@nox.session
 def test(session):
     session.install("-rdev-requirements.txt", ".")
     session.run("pytest", *(session.posargs or ("test_truststore.py",)))
