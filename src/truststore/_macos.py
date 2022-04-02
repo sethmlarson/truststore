@@ -245,13 +245,45 @@ def _cf_string_ref_to_str(cf_string_ref: CFStringRef) -> str | None:  # type: ig
     return string  # type: ignore[no-any-return]
 
 
+def _der_certs_to_cf_cert_array(certs: list[bytes]) -> CFMutableArrayRef:  # type: ignore[valid-type]
+    """Builds a CFArray of SecCertificateRefs from a list of DER-encoded certificates.
+    Responsibility of the caller to call CoreFoundation.CFRelease on the CFArray.
+    """
+    cf_array = CoreFoundation.CFArrayCreateMutable(
+        CoreFoundation.kCFAllocatorDefault,
+        0,
+        ctypes.byref(CoreFoundation.kCFTypeArrayCallBacks),
+    )
+    if not cf_array:
+        raise MemoryError("Unable to allocate memory!")
+
+    for cert_data in certs:
+        cf_data = None
+        sec_cert_ref = None
+        try:
+            cf_data = _bytes_to_cf_data_ref(cert_data)
+            sec_cert_ref = Security.SecCertificateCreateWithData(
+                CoreFoundation.kCFAllocatorDefault, cf_data
+            )
+            CoreFoundation.CFArrayAppendValue(cf_array, sec_cert_ref)
+        finally:
+            if cf_data:
+                CoreFoundation.CFRelease(cf_data)
+            if sec_cert_ref:
+                CoreFoundation.CFRelease(sec_cert_ref)
+
+    return cf_array  # type: ignore[no-any-return]
+
+
 def _configure_context(ctx: ssl.SSLContext) -> None:
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
 
 
 def _verify_peercerts_impl(
-    cert_chain: list[bytes], server_hostname: str | None = None
+    ssl_context: ssl.SSLContext,
+    cert_chain: list[bytes],
+    server_hostname: str | None = None,
 ) -> None:
     certs = None
     policy = None
@@ -271,29 +303,7 @@ def _verify_peercerts_impl(
 
         certs = None
         try:
-            certs = CoreFoundation.CFArrayCreateMutable(
-                CoreFoundation.kCFAllocatorDefault,
-                0,
-                ctypes.byref(CoreFoundation.kCFTypeArrayCallBacks),
-            )
-            if not certs:
-                raise MemoryError("Unable to allocate memory!")
-
-            # Load all the DER-encoded certificates in the chain
-            for cert_data in cert_chain:
-                cf_data = None
-                cert = None
-                try:
-                    cf_data = _bytes_to_cf_data_ref(cert_data)
-                    cert = Security.SecCertificateCreateWithData(
-                        CoreFoundation.kCFAllocatorDefault, cf_data
-                    )
-                    CoreFoundation.CFArrayAppendValue(certs, cert)
-                finally:
-                    if cf_data:
-                        CoreFoundation.CFRelease(cf_data)
-                    if cert:
-                        CoreFoundation.CFRelease(cert)
+            certs = _der_certs_to_cf_cert_array(cert_chain)
 
             # Now that we have certificates loaded and a SecPolicy
             # we can finally create a SecTrust object!
@@ -309,8 +319,20 @@ def _verify_peercerts_impl(
             if certs:
                 CoreFoundation.CFRelease(certs)
 
-        # Set the Trust to use the default anchor certificates (system, keychain, fetched)
-        status = Security.SecTrustSetAnchorCertificates(trust, None)
+        # If there are additional trust anchors to load we need to transform
+        # the list of DER-encoded certificates into a CFArray. Otherwise
+        # pass 'None' to signal that we only want system / fetched certificates.
+        ctx_ca_certs_der: list[bytes] | None = ssl_context.get_ca_certs(binary_form=True)  # type: ignore[assignment]
+        if ctx_ca_certs_der:
+            ctx_ca_certs = None
+            try:
+                ctx_ca_certs = _der_certs_to_cf_cert_array(cert_chain)
+                status = Security.SecTrustSetAnchorCertificates(trust, ctx_ca_certs)
+            finally:
+                if ctx_ca_certs:
+                    CoreFoundation.CFRelease(ctx_ca_certs)
+        else:
+            status = Security.SecTrustSetAnchorCertificates(trust, None)
         assert status == 0  # TODO: Check status
 
         cf_error = CoreFoundation.CFErrorRef()

@@ -14,15 +14,6 @@ else:
     from ._openssl import _configure_context, _verify_peercerts_impl
 
 
-_CERTIFI_WHERE: str | None
-try:
-    from certifi import where
-
-    _CERTIFI_WHERE = where()
-except ImportError:
-    _CERTIFI_WHERE = None
-
-
 class TruststoreSSLContext(ssl.SSLContext):
     """SSLContext API that uses system certificates on all platforms"""
 
@@ -90,17 +81,7 @@ class TruststoreSSLContext(ssl.SSLContext):
         capath: str | bytes | os.PathLike[str] | os.PathLike[bytes] | None = None,
         cadata: str | bytes | None = None,
     ) -> None:
-        # Ignore certifi.where() being used as a default, otherwise we raise an error.
-        if (
-            _CERTIFI_WHERE
-            and not cadata
-            and (cafile is None or cafile == _CERTIFI_WHERE)
-            and (capath is None or capath == _CERTIFI_WHERE)
-        ):
-            return
-        raise NotImplementedError(
-            "TruststoreSSLContext.load_verify_locations() isn't implemented"
-        )
+        return self._ctx.load_verify_locations(cafile, capath, cadata)
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._ctx, name)
@@ -123,4 +104,6 @@ def _verify_peercerts(
     cert_bytes = [
         cert.public_bytes(ENCODING_DER) for cert in sslobj.get_unverified_chain()  # type: ignore[attr-defined]
     ]
-    _verify_peercerts_impl(cert_bytes, server_hostname=server_hostname)
+    _verify_peercerts_impl(
+        sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
+    )

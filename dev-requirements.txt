@@ -1,5 +1,6 @@
 aiohttp
-certifi
 pytest
 pytest-asyncio
+pytest-httpserver
 urllib3
+trustme
