@@ -39,11 +39,6 @@ def trustme_ca():
 
 
 @pytest.fixture(scope="session")
-def httpserver_listen_address():
-    return ("localhost", 8080)
-
-
-@pytest.fixture(scope="session")
 def httpserver_ssl_context(trustme_ca):
     server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     server_cert = trustme_ca.issue_cert("localhost")
@@ -133,7 +128,7 @@ def test_trustme_cert(trustme_ca, httpserver):
     httpserver.expect_request("/", method="GET").respond_with_json({})
 
     http = urllib3.PoolManager(ssl_context=ctx)
-    resp = http.request("GET", "https://localhost:8080")
+    resp = http.request("GET", httpserver.url_for("/"))
     assert resp.status == 200
     assert len(resp.data) > 0
 
