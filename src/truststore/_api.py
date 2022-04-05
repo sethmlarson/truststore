@@ -14,7 +14,7 @@ else:
     from ._openssl import _configure_context, _verify_peercerts_impl
 
 
-class TruststoreSSLContext(ssl.SSLContext):
+class SSLContext(ssl.SSLContext):
     """SSLContext API that uses system certificates on all platforms"""
 
     def __init__(self, protocol: int = ssl.PROTOCOL_TLS) -> None:
