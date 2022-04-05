@@ -9,7 +9,7 @@ import trustme
 import urllib3
 import urllib3.exceptions
 
-from truststore import TruststoreSSLContext
+import truststore
 
 successful_hosts = pytest.mark.parametrize("host", ["example.com", "1.1.1.1"])
 
@@ -49,7 +49,7 @@ def httpserver_ssl_context(trustme_ca):
 def connect_to_host(host: str, use_server_hostname: bool = True):
     sock = socket.create_connection((host, 443))
     try:
-        ctx = TruststoreSSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ctx.wrap_socket(sock, server_hostname=host if use_server_hostname else None)
     finally:
         sock.close()
@@ -74,7 +74,7 @@ def test_sslcontext_api_success(host):
     if host == "1.1.1.1":
         pytest.skip("urllib3 doesn't pass server_hostname for IP addresses")
 
-    ctx = TruststoreSSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     http = urllib3.PoolManager(ssl_context=ctx)
     resp = http.request("GET", f"https://{host}")
     assert resp.status == 200
@@ -84,7 +84,7 @@ def test_sslcontext_api_success(host):
 @successful_hosts
 @pytest.mark.asyncio
 async def test_sslcontext_api_success_async(host):
-    ctx = TruststoreSSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     async with aiohttp.ClientSession() as http:
         resp = await http.request("GET", f"https://{host}", ssl=ctx)
 
@@ -97,7 +97,7 @@ def test_sslcontext_api_failures(host):
     if platform.system() == "Linux" and host == "revoked.badssl.com":
         pytest.skip("Linux currently doesn't support CRLs")
 
-    ctx = TruststoreSSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     http = urllib3.PoolManager(ssl_context=ctx)
     with pytest.raises(urllib3.exceptions.SSLError) as e:
         http.request("GET", f"https://{host}", retries=False)
@@ -111,7 +111,7 @@ async def test_sslcontext_api_failures_async(host):
     if platform.system() == "Linux" and host == "revoked.badssl.com":
         pytest.skip("Linux currently doesn't support CRLs")
 
-    ctx = TruststoreSSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     async with aiohttp.ClientSession() as http:
         with pytest.raises(
             aiohttp.client_exceptions.ClientConnectorCertificateError
@@ -122,7 +122,7 @@ async def test_sslcontext_api_failures_async(host):
 
 
 def test_trustme_cert(trustme_ca, httpserver):
-    ctx = TruststoreSSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     trustme_ca.configure_trust(ctx)
 
     httpserver.expect_request("/", method="GET").respond_with_json({})
@@ -134,7 +134,7 @@ def test_trustme_cert(trustme_ca, httpserver):
 
 
 def test_trustme_cert_still_uses_system_certs(trustme_ca):
-    ctx = TruststoreSSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     trustme_ca.configure_trust(ctx)
 
     http = urllib3.PoolManager(ssl_context=ctx)

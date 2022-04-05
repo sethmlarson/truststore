@@ -6,7 +6,7 @@ if _sys.version_info < (3, 10):
     raise ImportError("truststore requires Python 3.10 or later")
 del _sys
 
-from ._api import TruststoreSSLContext  # noqa: E402
+from ._api import SSLContext  # noqa: E402
 
-__all__ = ["TruststoreSSLContext"]
+__all__ = ["SSLContext"]
 __version__ = "0.2.0"
