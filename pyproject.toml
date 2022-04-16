@@ -13,3 +13,6 @@ requires-python = ">= 3.10"
 
 [project.urls]
 Home = "https://github.com/sethmlarson/truststore"
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
