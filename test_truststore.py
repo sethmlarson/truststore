@@ -11,6 +11,10 @@ import urllib3.exceptions
 
 import truststore
 
+# Make sure the httpserver doesn't hang
+# if the client drops the connection due to a cert verification error
+socket.setdefaulttimeout(5)
+
 successful_hosts = pytest.mark.parametrize("host", ["example.com", "1.1.1.1"])
 
 failure_hosts_list = [
@@ -32,8 +36,6 @@ failure_hosts = pytest.mark.parametrize(
 
 @pytest.fixture(scope="session")
 def trustme_ca():
-    if platform.system() == "Windows":
-        pytest.skip("Windows doesn't implement custom CA certificates yet")
     ca = trustme.CA()
     yield ca
 

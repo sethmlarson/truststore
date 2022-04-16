@@ -30,4 +30,5 @@ def lint(session):
 @nox.session(python="3.10")
 def test(session):
     session.install("-rdev-requirements.txt", ".")
-    session.run("pytest", *(session.posargs or ("test_truststore.py",)))
+    session.run("pip", "freeze")
+    session.run("pytest", "-v", "-s", *(session.posargs or ("test_truststore.py",)))
