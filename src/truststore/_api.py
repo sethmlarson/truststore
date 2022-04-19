@@ -53,7 +53,11 @@ class SSLContext(ssl.SSLContext):
             suppress_ragged_eofs=suppress_ragged_eofs,
             session=session,
         )
-        _verify_peercerts(ssl_sock, server_hostname=server_hostname)
+        try:
+            _verify_peercerts(ssl_sock, server_hostname=server_hostname)
+        except ssl.SSLError:
+            ssl_sock.close()
+            raise
         return ssl_sock
 
     def wrap_bio(

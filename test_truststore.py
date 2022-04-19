@@ -1,3 +1,4 @@
+import asyncio
 import platform
 import socket
 import ssl
@@ -13,7 +14,7 @@ import truststore
 
 # Make sure the httpserver doesn't hang
 # if the client drops the connection due to a cert verification error
-socket.setdefaulttimeout(5)
+socket.setdefaulttimeout(10)
 
 successful_hosts = pytest.mark.parametrize("host", ["example.com", "1.1.1.1"])
 
@@ -49,12 +50,12 @@ def httpserver_ssl_context(trustme_ca):
 
 
 def connect_to_host(host: str, use_server_hostname: bool = True):
-    sock = socket.create_connection((host, 443))
-    try:
+    with socket.create_connection((host, 443)) as sock:
         ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ctx.wrap_socket(sock, server_hostname=host if use_server_hostname else None)
-    finally:
-        sock.close()
+        with ctx.wrap_socket(
+            sock, server_hostname=host if use_server_hostname else None
+        ):
+            pass
 
 
 @successful_hosts
@@ -77,8 +78,8 @@ def test_sslcontext_api_success(host):
         pytest.skip("urllib3 doesn't pass server_hostname for IP addresses")
 
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    http = urllib3.PoolManager(ssl_context=ctx)
-    resp = http.request("GET", f"https://{host}")
+    with urllib3.PoolManager(ssl_context=ctx) as http:
+        resp = http.request("GET", f"https://{host}")
     assert resp.status == 200
     assert len(resp.data) > 0
 
@@ -92,6 +93,8 @@ async def test_sslcontext_api_success_async(host):
 
         assert resp.status == 200
         assert len(await resp.text()) > 0
+    # workaround https://github.com/aio-libs/aiohttp/issues/5426
+    await asyncio.sleep(0.2)
 
 
 @failure_hosts
@@ -100,9 +103,9 @@ def test_sslcontext_api_failures(host):
         pytest.skip("Linux currently doesn't support CRLs")
 
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    http = urllib3.PoolManager(ssl_context=ctx)
-    with pytest.raises(urllib3.exceptions.SSLError) as e:
-        http.request("GET", f"https://{host}", retries=False)
+    with urllib3.PoolManager(ssl_context=ctx) as http:
+        with pytest.raises(urllib3.exceptions.SSLError) as e:
+            http.request("GET", f"https://{host}", retries=False)
 
     assert "cert" in repr(e.value).lower() and "verif" in repr(e.value).lower()
 
@@ -119,6 +122,8 @@ async def test_sslcontext_api_failures_async(host):
             aiohttp.client_exceptions.ClientConnectorCertificateError
         ) as e:
             await http.request("GET", f"https://{host}", ssl=ctx)
+    # workaround https://github.com/aio-libs/aiohttp/issues/5426
+    await asyncio.sleep(0.2)
 
     assert "cert" in repr(e.value).lower() and "verif" in repr(e.value).lower()
 
@@ -129,8 +134,8 @@ def test_trustme_cert(trustme_ca, httpserver):
 
     httpserver.expect_request("/", method="GET").respond_with_json({})
 
-    http = urllib3.PoolManager(ssl_context=ctx)
-    resp = http.request("GET", httpserver.url_for("/"))
+    with urllib3.PoolManager(ssl_context=ctx) as http:
+        resp = http.request("GET", httpserver.url_for("/"))
     assert resp.status == 200
     assert len(resp.data) > 0
 
@@ -139,7 +144,7 @@ def test_trustme_cert_still_uses_system_certs(trustme_ca):
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     trustme_ca.configure_trust(ctx)
 
-    http = urllib3.PoolManager(ssl_context=ctx)
-    resp = http.request("GET", "https://example.com")
+    with urllib3.PoolManager(ssl_context=ctx) as http:
+        resp = http.request("GET", "https://example.com")
     assert resp.status == 200
     assert len(resp.data) > 0
