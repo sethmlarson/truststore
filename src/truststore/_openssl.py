@@ -1,44 +1,57 @@
 import os
+import re
 import ssl
 
-_CA_FILES = [
-    "/etc/ssl/certs/ca-certificates.crt",  # Debian/Ubuntu/Gentoo etc.
-    "/etc/pki/tls/certs/ca-bundle.crt",  # Fedora/RHEL 6
-    "/etc/ssl/ca-bundle.pem",  # OpenSUSE
-    "/etc/pki/tls/cacert.pem",  # OpenELEC
-    "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem",  # CentOS/RHEL 7
-    "/etc/ssl/cert.pem",  # Alpine Linux
-    "/usr/local/etc/ssl/cert.pem",  # FreeBSD
-    "/etc/ssl/cert.pem",  # OpenBSD
-    "/usr/local/share/certs/ca-root-nss.crt",  # DragonFly
-    "/etc/openssl/certs/ca-certificates.crt",  # NetBSD
-    "/etc/certs/ca-certificates.crt",  # Solaris 11.2+
-    "/etc/ssl/certs/ca-certificates.crt",  # Joyent SmartOS
-    "/etc/ssl/cacert.pem",  # OmniOS
+# candidates based on https://github.com/tiran/certifi-system-store by Christian Heimes
+_CA_FILE_CANDIDATES = [
+    # Alpine, Arch, Fedora 34+, OpenWRT, RHEL 9+, BSD
+    "/etc/ssl/cert.pem",
+    # Fedora <= 34, RHEL <= 9, CentOS <= 9
+    "/etc/pki/tls/cert.pem",
+    # Debian, Ubuntu (requires ca-certificates)
+    "/etc/ssl/certs/ca-certificates.crt",
+    # SUSE
+    "/etc/ssl/ca-bundle.pem",
 ]
 
-_CA_DIRS = [
-    "/etc/ssl/certs",  # SLES10/SLES11, FreeBSD 12.2+
-    "/etc/pki/tls/certs",  # Fedora/RHEL
-    "/system/etc/security/cacerts",  # Android
-    "/usr/local/share/certs",  # FreeBSD
-    "/etc/openssl/certs",  # NetBSD
-    "/etc/certs/CA",  # Solaris
-]
+_HASHED_CERT_FILENAME_RE = re.compile(r"^[0-9a-fA-F]{8}\.[0-9]$")
 
 
 def _configure_context(ctx: ssl.SSLContext) -> None:
-    for cafile in _CA_FILES:
-        if os.path.isfile(cafile):
-            ctx.load_verify_locations(cafile=cafile)
-            break
+    # First, check whether the default locations from OpenSSL
+    # seem like they will give us a usable set of CA certs.
+    # ssl.get_default_verify_paths already takes care of:
+    # - getting cafile from either the SSL_CERT_FILE env var
+    #   or the path configured when OpenSSL was compiled,
+    #   and verifying that that path exists
+    # - getting capath from either the SSL_CERT_DIR env var
+    #   or the path configured when OpenSSL was compiled,
+    #   and verifying that that path exists
+    # In addition we'll check whether capath appears to contain certs.
+    defaults = ssl.get_default_verify_paths()
+    if defaults.cafile or (defaults.capath and _capath_contains_certs(defaults.capath)):
+        ctx.set_default_verify_paths()
     else:
-        for cadir in _CA_DIRS:
-            if os.path.isdir(cadir):
-                ctx.load_verify_locations(capath=cadir)
+        # cafile from OpenSSL doesn't exist
+        # and capath from OpenSSL doesn't contain certs.
+        # Let's search other common locations instead.
+        for cafile in _CA_FILE_CANDIDATES:
+            if os.path.isfile(cafile):
+                ctx.load_verify_locations(cafile=cafile)
+                break
 
     ctx.verify_mode = ssl.CERT_REQUIRED
     ctx.check_hostname = True
+
+
+def _capath_contains_certs(capath: str) -> bool:
+    """Check whether capath exists and contains certs in the expected format."""
+    if not os.path.isdir(capath):
+        return False
+    for name in os.listdir(capath):
+        if _HASHED_CERT_FILENAME_RE.match(name):
+            return True
+    return False
 
 
 def _verify_peercerts_impl(
@@ -46,4 +59,6 @@ def _verify_peercerts_impl(
     cert_chain: list[bytes],
     server_hostname: str | None = None,
 ) -> None:
+    # This is a no-op because we've enabled SSLContext's built-in
+    # verification via verify_mode=CERT_REQUIRED, and don't need to repeat it.
     pass
