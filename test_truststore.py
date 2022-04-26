@@ -1,7 +1,9 @@
 import asyncio
+import os
 import platform
 import socket
 import ssl
+import tempfile
 
 import aiohttp
 import aiohttp.client_exceptions
@@ -9,6 +11,7 @@ import pytest
 import trustme
 import urllib3
 import urllib3.exceptions
+from OpenSSL.crypto import X509
 
 import truststore
 
@@ -138,6 +141,23 @@ def test_trustme_cert(trustme_ca, httpserver):
         resp = http.request("GET", httpserver.url_for("/"))
     assert resp.status == 200
     assert len(resp.data) > 0
+
+
+def test_trustme_cert_loaded_via_capath(trustme_ca, httpserver):
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    with tempfile.TemporaryDirectory() as capath:
+        with open(f"{capath}/cert.pem", "wb") as certfile:
+            certfile.write(trustme_ca.cert_pem.bytes())
+        cert_hash = X509.from_cryptography(trustme_ca._certificate).subject_name_hash()
+        os.symlink(f"{capath}/cert.pem", f"{capath}/{cert_hash:x}.0")
+        ctx.load_verify_locations(capath=capath)
+
+        httpserver.expect_request("/", method="GET").respond_with_json({})
+
+        with urllib3.PoolManager(ssl_context=ctx) as http:
+            resp = http.request("GET", httpserver.url_for("/"))
+        assert resp.status == 200
+        assert len(resp.data) > 0
 
 
 def test_trustme_cert_still_uses_system_certs(trustme_ca):

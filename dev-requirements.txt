@@ -1,4 +1,5 @@
 aiohttp
+pyopenssl
 pytest
 pytest-asyncio
 pytest-httpserver
