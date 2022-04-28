@@ -25,16 +25,13 @@ class SSLContext(ssl.SSLContext):
             # This object exists because wrap_bio() doesn't
             # immediately do the handshake so we need to do
             # certificate verifications after SSLObject.do_handshake()
-            _TRUSTSTORE_SERVER_HOSTNAME = None
 
             def do_handshake(self) -> None:
                 ret = super().do_handshake()
-                _verify_peercerts(
-                    self, server_hostname=self._TRUSTSTORE_SERVER_HOSTNAME
-                )
+                _verify_peercerts(self, server_hostname=self.server_hostname)
                 return ret
 
-        self._ctx.sslobject_class = TruststoreSSLObject  # type: ignore[misc]
+        self._ctx.sslobject_class = TruststoreSSLObject
 
     def wrap_socket(
         self,
@@ -68,8 +65,6 @@ class SSLContext(ssl.SSLContext):
         server_hostname: str | None = None,
         session: ssl.SSLSession | None = None,
     ) -> ssl.SSLObject:
-        # Super hacky way of passing the server_hostname value forward to sslobject_class.
-        self._ctx.sslobject_class._TRUSTSTORE_SERVER_HOSTNAME = server_hostname  # type: ignore[attr-defined]
         ssl_obj = self._ctx.wrap_bio(
             incoming,
             outgoing,
