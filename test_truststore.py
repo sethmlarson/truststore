@@ -4,6 +4,8 @@ import platform
 import socket
 import ssl
 import tempfile
+from dataclasses import dataclass
+from operator import attrgetter
 
 import aiohttp
 import aiohttp.client_exceptions
@@ -21,20 +23,98 @@ socket.setdefaulttimeout(10)
 
 successful_hosts = pytest.mark.parametrize("host", ["example.com", "1.1.1.1"])
 
+
+@dataclass
+class FailureHost:
+    host: str
+    error_messages: list[str]
+
+
 failure_hosts_list = [
-    "wrong.host.badssl.com",
-    "expired.badssl.com",
-    "self-signed.badssl.com",
-    "untrusted-root.badssl.com",
-    "superfish.badssl.com",
+    FailureHost(
+        host="wrong.host.badssl.com",
+        error_messages=[
+            # OpenSSL
+            "Hostname mismatch, certificate is not valid for 'wrong.host.badssl.com'",
+            # macOS
+            "certificate name does not match",
+            # Windows
+            "The certificate's CN name does not match the passed value.",
+        ],
+    ),
+    FailureHost(
+        host="expired.badssl.com",
+        error_messages=[
+            # OpenSSL
+            "certificate has expired",
+            # macOS
+            "“*.badssl.com” certificate is expired",
+            # Windows
+            (
+                "A required certificate is not within its validity period when verifying "
+                "against the current system clock or the timestamp in the signed file."
+            ),
+        ],
+    ),
+    FailureHost(
+        host="self-signed.badssl.com",
+        error_messages=[
+            # OpenSSL
+            "self signed certificate",
+            # macOS
+            "“*.badssl.com” certificate is not trusted",
+            # Windows
+            (
+                "A certificate chain processed, but terminated in a root "
+                "certificate which is not trusted by the trust provider."
+            ),
+        ],
+    ),
+    FailureHost(
+        host="untrusted-root.badssl.com",
+        error_messages=[
+            # OpenSSL
+            "self signed certificate in certificate chain",
+            # macOS
+            "“BadSSL Untrusted Root Certificate Authority” certificate is not trusted",
+            # Windows
+            (
+                "A certificate chain processed, but terminated in a root "
+                "certificate which is not trusted by the trust provider."
+            ),
+        ],
+    ),
+    FailureHost(
+        host="superfish.badssl.com",
+        error_messages=[
+            # OpenSSL
+            "unable to get local issuer certificate",
+            # macOS
+            "“superfish.badssl.com” certificate is not trusted",
+            # Windows
+            (
+                "A certificate chain processed, but terminated in a root "
+                "certificate which is not trusted by the trust provider."
+            ),
+        ],
+    ),
 ]
 
 if platform.system() != "Linux":
-    failure_hosts_list.append("revoked.badssl.com")
+    failure_hosts_list.append(
+        FailureHost(
+            host="revoked.badssl.com",
+            error_messages=[
+                # macOS
+                "“revoked.badssl.com” certificate is revoked",
+                # Windows
+                "The certificate is revoked.",
+            ],
+        )
+    )
 
 failure_hosts = pytest.mark.parametrize(
-    "host",
-    failure_hosts_list,
+    "failure", failure_hosts_list, ids=attrgetter("host")
 )
 
 
@@ -67,12 +147,12 @@ def test_success(host):
 
 
 @failure_hosts
-def test_failures(host):
-    if platform.system() == "Linux" and host == "revoked.badssl.com":
-        pytest.skip("Linux currently doesn't support CRLs")
+def test_failures(failure):
+    with pytest.raises(ssl.SSLCertVerificationError) as e:
+        connect_to_host(failure.host)
 
-    with pytest.raises(ssl.SSLCertVerificationError):
-        connect_to_host(host)
+    error_repr = repr(e.value)
+    assert any(message in error_repr for message in failure.error_messages), error_repr
 
 
 @successful_hosts
@@ -101,7 +181,8 @@ async def test_sslcontext_api_success_async(host):
 
 
 @failure_hosts
-def test_sslcontext_api_failures(host):
+def test_sslcontext_api_failures(failure):
+    host = failure.host
     if platform.system() == "Linux" and host == "revoked.badssl.com":
         pytest.skip("Linux currently doesn't support CRLs")
 
@@ -115,16 +196,14 @@ def test_sslcontext_api_failures(host):
 
 @failure_hosts
 @pytest.mark.asyncio
-async def test_sslcontext_api_failures_async(host):
-    if platform.system() == "Linux" and host == "revoked.badssl.com":
-        pytest.skip("Linux currently doesn't support CRLs")
-
+async def test_sslcontext_api_failures_async(failure):
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     async with aiohttp.ClientSession() as http:
         with pytest.raises(
             aiohttp.client_exceptions.ClientConnectorCertificateError
         ) as e:
-            await http.request("GET", f"https://{host}", ssl=ctx)
+            await http.request("GET", f"https://{failure.host}", ssl=ctx)
+
     # workaround https://github.com/aio-libs/aiohttp/issues/5426
     await asyncio.sleep(0.2)
 

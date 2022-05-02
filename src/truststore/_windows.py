@@ -9,6 +9,7 @@ from ctypes import (
     c_void_p,
     c_wchar_p,
     cast,
+    create_unicode_buffer,
     pointer,
     sizeof,
 )
@@ -18,9 +19,11 @@ from ctypes.wintypes import (
     HANDLE,
     LONG,
     LPCSTR,
+    LPCVOID,
     LPCWSTR,
     LPFILETIME,
     LPSTR,
+    LPWSTR,
 )
 from typing import TYPE_CHECKING, Any
 
@@ -198,8 +201,11 @@ CERT_CHAIN_REVOCATION_CHECK_END_CERT = 0x10000000
 CERT_CHAIN_REVOCATION_CHECK_CHAIN = 0x20000000
 AUTHTYPE_SERVER = 2
 CERT_CHAIN_POLICY_SSL = 4
+FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000
+FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200
 
 wincrypt = WinDLL("crypt32.dll")
+kernel32 = WinDLL("kernel32.dll")
 
 
 def _handle_win_error(result: bool, _: Any, args: Any) -> Any:
@@ -273,6 +279,18 @@ CertFreeCertificateContext.argtypes = (PCERT_CONTEXT,)
 
 CertFreeCertificateChainEngine = wincrypt.CertFreeCertificateChainEngine
 CertFreeCertificateChainEngine.argtypes = (HCERTCHAINENGINE,)
+
+FormatMessageW = kernel32.FormatMessageW
+FormatMessageW.argtypes = (
+    DWORD,
+    LPCVOID,
+    DWORD,
+    DWORD,
+    LPWSTR,
+    DWORD,
+    c_void_p,
+)
+FormatMessageW.restype = DWORD
 
 
 def _verify_peercerts_impl(
@@ -400,12 +418,31 @@ def _get_and_verify_cert_chain(
         )
 
         # Check status
-        # TODO: Better error messages
         error_code = policy_status.dwError
         if error_code:
-            err = ssl.SSLCertVerificationError(
-                f"Certificate chain policy error {error_code:#x} [{policy_status.lElementIndex}]"
+
+            # Try getting a human readable message for an error code.
+            error_message_buf = create_unicode_buffer(1024)
+            error_message_chars = FormatMessageW(
+                FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                None,
+                error_code,
+                0,
+                error_message_buf,
+                sizeof(error_message_buf),
+                None,
             )
+
+            # See if we received a message for the error,
+            # otherwise we use a generic error with the
+            # error code and hope that it's search-able.
+            if error_message_chars <= 0:
+                error_message = f"Certificate chain policy error {error_code:#x} [{policy_status.lElementIndex}]"
+            else:
+                error_message = error_message_buf.value.strip()
+
+            err = ssl.SSLCertVerificationError(error_message)
+            err.verify_message = error_message
             err.verify_code = error_code
             raise err from None
     finally:
