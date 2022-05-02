@@ -330,6 +330,13 @@ def _verify_peercerts_impl(
         chain_params.cbSize = sizeof(chain_params)
         pChainPara = pointer(chain_params)
 
+        if ssl_context.verify_flags & ssl.VERIFY_CRL_CHECK_CHAIN:
+            chain_flags = CERT_CHAIN_REVOCATION_CHECK_CHAIN
+        elif ssl_context.verify_flags & ssl.VERIFY_CRL_CHECK_LEAF:
+            chain_flags = CERT_CHAIN_REVOCATION_CHECK_END_CERT
+        else:
+            chain_flags = 0
+
         try:
             # First attempt to verify using the default Windows system trust roots
             # (default chain engine).
@@ -339,8 +346,7 @@ def _verify_peercerts_impl(
                 pCertContext,
                 pChainPara,
                 server_hostname,
-                # Check revocation of each cert in the chain
-                chain_flags=CERT_CHAIN_REVOCATION_CHECK_CHAIN,
+                chain_flags=chain_flags,
             )
         except ssl.SSLCertVerificationError:
             # If that fails but custom CA certs have been added
@@ -355,10 +361,7 @@ def _verify_peercerts_impl(
                     pCertContext,
                     pChainPara,
                     server_hostname,
-                    # Not checking revocation in this case,
-                    # because I don't think we don't have a way to access CRLs
-                    # loaded using load_verify_locations.
-                    chain_flags=0,
+                    chain_flags=chain_flags,
                 )
             else:
                 raise

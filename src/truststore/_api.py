@@ -85,6 +85,12 @@ class SSLContext(ssl.SSLContext):
     def __getattr__(self, name: str) -> Any:
         return getattr(self._ctx, name)
 
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name == "verify_flags":
+            self._ctx.verify_flags = value
+        else:
+            return super().__setattr__(name, value)
+
 
 def _verify_peercerts(
     sock_or_sslobj: ssl.SSLSocket | ssl.SSLObject, server_hostname: str | None
