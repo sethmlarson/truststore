@@ -1,18 +1,17 @@
 import asyncio
-from contextlib import contextmanager
-from dataclasses import dataclass
-import ssl
 import pathlib
-from contextlib import asynccontextmanager
+import ssl
+from contextlib import asynccontextmanager, contextmanager
+from dataclasses import dataclass
 from tempfile import TemporaryDirectory
 from typing import AsyncIterator, Iterator
 
+import aiohttp
 import pytest
+from uvicorn import Config, Server  # type: ignore[import]
+from xpresso import App, Path
 
 import truststore
-import aiohttp
-from xpresso import App, Path
-from uvicorn import Config, Server  # type: ignore[import]
 
 
 @dataclass
