@@ -32,7 +32,7 @@ def get_cert_files() -> Iterator[CertFiles]:
 
 async def create_certs(cert_files: CertFiles) -> None:
     p = await asyncio.create_subprocess_exec(
-        "mkcert",  "-install"  # idempotent, installs CA authority
+        "mkcert", "-install"  # idempotent, installs CA authority
     )
     await asyncio.wait_for(p.wait(), timeout=1)
     assert p.returncode == 0
