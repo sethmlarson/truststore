@@ -1,0 +1,7 @@
+# Restrict all files related to deploying to
+# require administrator approval to modify.
+
+.github/workflows/deploy.yml @sethmlarson @davisagli
+.github/CODEOWNERS           @sethmlarson @davisagli
+src/truststore/__init__.py   @sethmlarson @davisagli
+pyproject.toml               @sethmlarson @davisagli
