@@ -56,8 +56,8 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           go install filippo.io/mkcert@latest
+          # for non-interactive install of root CA
           sudo security authorizationdb write com.apple.trust-settings.admin allow
-          brew install nss
           mkcert -install
 
       # - name: Setup upterm session
@@ -73,8 +73,7 @@ jobs:
       - name: Instal Mkcert CA Windows
         if: runner.os == 'Windows'
         run: |
-          go install filippo.io/mkcert@latest
-          mkcert -install
+          choco install mkcert
 
       - name: Run tests
         run: |
