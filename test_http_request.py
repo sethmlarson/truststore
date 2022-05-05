@@ -5,13 +5,10 @@ import ssl
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from tempfile import TemporaryDirectory
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Iterator
+from typing import AsyncIterator, Iterator
 
-import aiohttp
 import pytest
-from uvicorn import Config, Server  # type: ignore[import]
-from aiohttp import web
-import uvicorn
+from aiohttp import web, ClientSession
 
 import truststore
 
@@ -52,7 +49,7 @@ async def create_certs(cert_files: CertFiles) -> None:
 
 async def send_request() -> None:
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    async with aiohttp.ClientSession() as client:
+    async with ClientSession() as client:
         resp = await client.get("https://localhost:8000", ssl=ctx)
         assert resp.status == 200
 
