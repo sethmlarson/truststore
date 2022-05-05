@@ -20,12 +20,15 @@ class MissingCAError(Exception):
 
 
 async def is_mkcert_installed() -> bool:
-    p = await asyncio.create_subprocess_exec(
-        "mkcert",
-        "-help",
-        stderr=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-    )
+    try:
+        p = await asyncio.create_subprocess_exec(
+            "mkcert",
+            "-help",
+            stderr=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+        )
+    except FileNotFoundError:
+        return False
     await asyncio.wait_for(p.wait(), timeout=1)
     return p.returncode == 0
 
