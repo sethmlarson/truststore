@@ -1,5 +1,4 @@
 import asyncio
-from asyncio.subprocess import PIPE
 import pathlib
 import ssl
 from contextlib import asynccontextmanager, contextmanager
@@ -32,16 +31,16 @@ async def create_certs(cert_files: CertFiles) -> None:
     p = await asyncio.create_subprocess_exec(
         "mkcert",
         "-install",  # idempotent, installs CA authority
-        stderr=PIPE,
-        stdout=PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
     )
     await asyncio.wait_for(p.wait(), timeout=1)
     assert p.returncode == 0
     cmd = f"mkcert -cert-file {cert_files.cert_file} -key-file {cert_files.key_file} localhost"
     p = await asyncio.create_subprocess_shell(
         cmd,
-        stderr=PIPE,
-        stdout=PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
     )
     await asyncio.wait_for(p.wait(), timeout=1)
     assert p.returncode == 0
