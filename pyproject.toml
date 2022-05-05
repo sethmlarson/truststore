@@ -7,7 +7,16 @@ name = "truststore"
 authors = [{name = "Seth Michael Larson", email = "sethmichaellarson@gmail.com"}]
 readme = "README.md"
 license = {file = "LICENSE"}
-classifiers = ["License :: OSI Approved :: MIT License"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+]
 dynamic = ["version", "description"]
 requires-python = ">= 3.10"
 
