@@ -464,5 +464,9 @@ def _verify_using_custom_ca_certs(
 
 
 def _configure_context(ctx: ssl.SSLContext) -> None:
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    # To external consumers, truststore.SSLContext does not expose
+    # a way to disable cert verification. But we need to disable it
+    # within OpenSSL so that we can provide an alternate implementation.
+    # To do that we use the properties from the base class ssl.SSLContext
+    ssl.SSLContext.check_hostname.__set__(ctx, False)
+    ssl.SSLContext.verify_mode.__set__(ctx, ssl.CERT_NONE)
