@@ -74,6 +74,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           choco install mkcert
+          mkcert -install
 
       - name: Run tests
         run: |
