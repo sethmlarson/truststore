@@ -67,12 +67,6 @@ jobs:
           sudo apt-get install libnss3-tools
           mkcert -install
 
-      - name: Instal Mkcert CA Windows
-        if: runner.os == 'Windows'
-        run: |
-          choco install mkcert
-          mkcert -install
-
       - name: Run tests
         run: |
           python -m pip install nox
