@@ -57,10 +57,11 @@ jobs:
         run: |
           go install filippo.io/mkcert@latest
           sudo security authorizationdb write com.apple.trust-settings.admin allow
+          brew install nss
           mkcert -install
 
-      - name: Setup upterm session
-        uses: lhotari/action-upterm@v1
+      # - name: Setup upterm session
+      #   uses: lhotari/action-upterm@v1
 
       - name: Instal Mkcert CA Ubuntu
         if: runner.os == 'Linux'

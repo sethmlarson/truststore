@@ -13,6 +13,7 @@ import truststore
 
 
 PORT = 9999  # arbitrary choice
+MISSING_CA_ERR_TXT = b"local CA is not installed in the system trust store"
 
 
 class MissingCAError(Exception):
@@ -64,7 +65,7 @@ async def install_certs() -> AsyncIterator[CertFiles]:
         )
         await asyncio.wait_for(p.wait(), timeout=1)
         stdout, stderr = await p.communicate()
-        if b"local CA is not installed" in stderr + stdout:
+        if MISSING_CA_ERR_TXT in stderr + stdout:
             raise MissingCAError
         assert p.returncode == 0
         yield certfiles
