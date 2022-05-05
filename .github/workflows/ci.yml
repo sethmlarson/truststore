@@ -65,6 +65,12 @@ jobs:
           go install filippo.io/mkcert@latest
           mkcert -install
 
+      - name: Instal Mkcert CA Windows
+        if: runner.os == 'Windows'
+        run: |
+          go install filippo.io/mkcert@latest
+          mkcert -install
+
       - name: Run tests
         run: |
           python -m pip install nox
