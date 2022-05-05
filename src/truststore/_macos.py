@@ -370,7 +370,7 @@ def _verify_peercerts_impl(
                 )
                 assert status == 0  # TODO: Check status
 
-                err = ssl.SSLCertVerificationError()
+                err = ssl.SSLCertVerificationError(cf_error_message)
                 err.verify_message = cf_error_message
                 err.verify_code = cf_error_code
                 raise err
