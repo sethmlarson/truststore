@@ -12,7 +12,7 @@ from aiohttp import web, ClientSession
 import truststore
 
 
-PORT = 9999
+PORT = 9999  # arbitrary choice
 
 
 class MissingCAError(Exception):
