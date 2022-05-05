@@ -31,4 +31,4 @@ def lint(session):
 def test(session):
     session.install("-rdev-requirements.txt", ".")
     session.run("pip", "freeze")
-    session.run("pytest", "-v", "-s", *(session.posargs or ("tests/",)))
+    session.run("pytest", "-v", "-s", "-rs", *(session.posargs or ("tests/",)))
