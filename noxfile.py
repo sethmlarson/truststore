@@ -27,7 +27,7 @@ def lint(session):
     session.run("mypy", "--strict", "--show-error-codes", "src/")
 
 
-@nox.session(python="3.10")
+@nox.session
 def test(session):
     session.install("-rdev-requirements.txt", ".")
     session.run("pip", "freeze")
