@@ -1,14 +1,17 @@
 import asyncio
+from asyncio.subprocess import PIPE
 import pathlib
 import ssl
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from tempfile import TemporaryDirectory
-from typing import Any, Awaitable, Callable, Dict, Iterator
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Iterator
 
 import aiohttp
 import pytest
 from uvicorn import Config, Server  # type: ignore[import]
+from aiohttp import web
+import uvicorn
 
 import truststore
 
@@ -30,12 +33,18 @@ def get_cert_files() -> Iterator[CertFiles]:
 
 async def create_certs(cert_files: CertFiles) -> None:
     p = await asyncio.create_subprocess_exec(
-        "mkcert", "-install"  # idempotent, installs CA authority
+        "mkcert",
+        "-install",  # idempotent, installs CA authority
+        stderr=PIPE,
+        stdout=PIPE,
     )
     await asyncio.wait_for(p.wait(), timeout=1)
     assert p.returncode == 0
+    cmd = f"mkcert -cert-file {cert_files.cert_file} -key-file {cert_files.key_file} localhost"
     p = await asyncio.create_subprocess_shell(
-        f"mkcert -cert-file {cert_files.cert_file} -key-file {cert_files.key_file} localhost",
+        cmd,
+        stderr=PIPE,
+        stdout=PIPE,
     )
     await asyncio.wait_for(p.wait(), timeout=1)
     assert p.returncode == 0
@@ -48,40 +57,38 @@ async def send_request() -> None:
         assert resp.status == 200
 
 
-def get_server(event: asyncio.Event, cert_files: CertFiles) -> Server:
-    async def app(
-        scope: Dict[str, Any],
-        receive: Callable[[], Awaitable[Dict[str, Any]]],
-        send: Callable[[Dict[str, Any]], Awaitable[None]],
-    ) -> None:
-        event.set()
-        assert scope["type"] == "http"  # swallowed by ASGI server
-        assert scope["scheme"] == "https"  # sanity check
-        await send({"type": "http.response.start", "status": 200, "headers": []})
-        await send({"type": "http.response.body", "body": b"", "more_body": False})
+async def handler(request: web.Request) -> web.Response:
+    return web.Response(status=200)
 
-    config = Config(
-        app=app,
-        ssl_certfile=str(cert_files.cert_file),
-        ssl_keyfile=str(cert_files.key_file),
+
+app = web.Application()
+app.add_routes([web.get("/", handler)])
+
+
+@asynccontextmanager
+async def run_server(cert_files: CertFiles) -> AsyncIterator[None]:
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain(
+        certfile=cert_files.cert_file,
+        keyfile=cert_files.key_file,
     )
-    server = Server(config)
-    return server
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, ssl_context=ctx, port=8000)
+    await site.start()
+    try:
+        yield
+    finally:
+        await site.stop()
 
 
 @pytest.mark.asyncio
-async def test_uvicorn_aiohttp_request() -> None:
+async def test_aiohttp_request_response() -> None:
     with get_cert_files() as cert_files:
         await create_certs(cert_files)
-        event = asyncio.Event()
-        server = get_server(event, cert_files)
-        server_task = asyncio.create_task(server.serve())
-        await asyncio.wait_for(event.wait(), timeout=1)
-        await send_request()
-        server.should_exit = True
-        await server.shutdown()
-        await server_task
+        async with run_server(cert_files):
+            await send_request()
 
 
 if __name__ == "__main__":
-    asyncio.run(test_uvicorn_aiohttp_request())
+    asyncio.run(test_aiohttp_request_response())

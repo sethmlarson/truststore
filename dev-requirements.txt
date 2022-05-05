@@ -5,4 +5,3 @@ pytest-asyncio
 pytest-httpserver
 urllib3
 trustme
-uvicorn
