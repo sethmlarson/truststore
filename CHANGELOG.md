@@ -1,3 +1,8 @@
+# 0.4.0
+
+* Added more descriptive error messages to `ssl.SSLCertVerificationError` determined by the OS on macOS and Windows.
+* Changed Windows to follow `SSLContext.verify_flags` for strictly checking CRLs instead of checking CRLs strictly by default.
+
 # 0.3.0
 
 * Added support for loading extra CA certificates via `SSLContext.load_verify_locations()`.
