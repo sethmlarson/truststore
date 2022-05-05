@@ -1,15 +1,14 @@
 import asyncio
 import pathlib
 import ssl
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import contextmanager
 from dataclasses import dataclass
 from tempfile import TemporaryDirectory
-from typing import AsyncIterator, Iterator
+from typing import Any, Awaitable, Callable, Dict, Iterator
 
 import aiohttp
 import pytest
 from uvicorn import Config, Server  # type: ignore[import]
-from xpresso import App, Path
 
 import truststore
 
@@ -50,15 +49,16 @@ async def send_request() -> None:
 
 
 def get_server(event: asyncio.Event, cert_files: CertFiles) -> Server:
-    async def endpoint() -> None:
-        ...
-
-    @asynccontextmanager
-    async def lifespan() -> AsyncIterator[None]:
+    async def app(
+        scope: Dict[str, Any],
+        receive: Callable[[], Awaitable[Dict[str, Any]]],
+        send: Callable[[Dict[str, Any]], Awaitable[None]],
+    ) -> None:
         event.set()
-        yield
-
-    app = App([Path("/", get=endpoint)], lifespan=lifespan)
+        assert scope["type"] == "http"  # swallowed by ASGI server
+        assert scope["scheme"] == "https"  # sanity check
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await send({"type": "http.response.body", "body": b"", "more_body": False})
 
     config = Config(
         app=app,
@@ -81,3 +81,7 @@ async def test_uvicorn_aiohttp_request() -> None:
         server.should_exit = True
         await server.shutdown()
         await server_task
+
+
+if __name__ == "__main__":
+    asyncio.run(test_uvicorn_aiohttp_request())
