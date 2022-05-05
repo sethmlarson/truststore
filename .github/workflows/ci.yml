@@ -55,5 +55,6 @@ jobs:
       - name: Run tests
         run: |
           go install filippo.io/mkcert@latest
+          mkcert -install
           python -m pip install nox
           nox -s test
