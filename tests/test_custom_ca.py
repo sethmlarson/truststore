@@ -14,6 +14,7 @@ import truststore
 
 PORT = 9999  # arbitrary choice
 MISSING_CA_ERR_TXT = b"local CA is not installed in the system trust store"
+SUBPROCESS_TIMEOUT = 5
 
 
 class MissingCAError(Exception):
@@ -30,7 +31,7 @@ async def is_mkcert_installed() -> bool:
         )
     except FileNotFoundError:
         return False
-    await asyncio.wait_for(p.wait(), timeout=1)
+    await asyncio.wait_for(p.wait(), timeout=SUBPROCESS_TIMEOUT)
     return p.returncode == 0
 
 
@@ -63,7 +64,7 @@ async def install_certs() -> AsyncIterator[CertFiles]:
             stderr=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
         )
-        await asyncio.wait_for(p.wait(), timeout=1)
+        await asyncio.wait_for(p.wait(), timeout=SUBPROCESS_TIMEOUT)
         stdout, stderr = await p.communicate()
         if MISSING_CA_ERR_TXT in stderr + stdout:
             raise MissingCAError
