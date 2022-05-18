@@ -56,7 +56,7 @@ jobs:
       - name: Install mkcert on macOS
         if: runner.os == 'macOS'
         run: |
-          go install filippo.io/mkcert@latest
+          go install filippo.io/mkcert@v1.4.4
           # for non-interactive install of root CA
           sudo security authorizationdb write com.apple.trust-settings.admin allow
           mkcert -install
@@ -64,7 +64,7 @@ jobs:
       - name: Install mkcert on Linux
         if: runner.os == 'Linux'
         run: |
-          go install filippo.io/mkcert@latest
+          go install filippo.io/mkcert@v1.4.4
           sudo apt-get install libnss3-tools
           mkcert -install
 
