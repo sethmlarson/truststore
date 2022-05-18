@@ -41,3 +41,9 @@ def test(session):
     session.install("-rdev-requirements.txt", ".")
     session.run("pip", "freeze")
     session.run("pytest", "-v", "-s", "-rs", *(session.posargs or ("tests/",)))
+
+
+@nox.session
+def docs(session):
+    session.install("-rdocs/requirements.txt", ".")
+    session.run("sphinx-build", "-b", "html", "docs/source", "docs/_build")
