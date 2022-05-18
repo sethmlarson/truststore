@@ -12,7 +12,6 @@ from aiohttp import ClientSession, web
 
 import truststore
 
-pytestmark = pytest.mark.asyncio
 
 
 MKCERT_CA_NOT_INSTALLED = b"local CA is not installed in the system trust store"
