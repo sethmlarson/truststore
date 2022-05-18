@@ -31,8 +31,13 @@ def lint(session):
     session.run("mypy", "--strict", "--show-error-codes", "src/")
 
 
-@nox.session
+@nox.session(python=["3.10", "3.11"])
 def test(session):
+    # work around issues building Cython-based extensions for prerelease Python versions
+    session.env["AIOHTTP_NO_EXTENSIONS"] = "1"
+    session.env["YARL_NO_EXTENSIONS"] = "1"
+    session.env["FROZENLIST_NO_EXTENSIONS"] = "1"
+
     session.install("-rdev-requirements.txt", ".")
     session.run("pip", "freeze")
     session.run("pytest", "-v", "-s", "-rs", *(session.posargs or ("tests/",)))
