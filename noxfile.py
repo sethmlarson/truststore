@@ -2,8 +2,12 @@ import glob
 
 import nox
 
-SOURCE_PATHS = glob.glob("*.py") + ["src/"]
-SOURCE_FILES = glob.glob("*.py") + glob.glob("src/**/*.py", recursive=True)
+SOURCE_PATHS = glob.glob("*.py") + ["src/"] + ["tests/"]
+SOURCE_FILES = (
+    glob.glob("*.py")
+    + glob.glob("src/**/*.py", recursive=True)
+    + glob.glob("tests/**/*.py", recursive=True)
+)
 
 
 @nox.session

@@ -43,16 +43,17 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
 
-      - name: Set Up Python ${{ matrix.python-version }}
+      - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install Go
+
+      - name: Setup Go
         uses: actions/setup-go@v3
         with:
           go-version: 1.x
       
-      - name: Instal Mkcert CA MacOS
+      - name: Install mkcert on macOS
         if: runner.os == 'macOS'
         run: |
           go install filippo.io/mkcert@latest
@@ -60,7 +61,7 @@ jobs:
           sudo security authorizationdb write com.apple.trust-settings.admin allow
           mkcert -install
 
-      - name: Instal Mkcert CA Ubuntu
+      - name: Install mkcert on Linux
         if: runner.os == 'Linux'
         run: |
           go install filippo.io/mkcert@latest
