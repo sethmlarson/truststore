@@ -12,15 +12,12 @@ from aiohttp import ClientSession, web
 
 import truststore
 
-pytestmark = pytest.mark.asyncio
-
-
 MKCERT_CA_NOT_INSTALLED = b"local CA is not installed in the system trust store"
 MKCERT_CA_ALREADY_INSTALLED = b"local CA is now installed in the system trust store"
 SUBPROCESS_TIMEOUT = 5
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture
 async def mkcert() -> typing.AsyncIterator[None]:
     async def is_mkcert_available() -> bool:
         try:
@@ -79,8 +76,8 @@ class CertFiles:
     cert_file: pathlib.Path
 
 
-@pytest_asyncio.fixture(scope="function")
-async def mkcert_certs(mkcert) -> typing.AsyncIterator[CertFiles]:
+@pytest_asyncio.fixture
+async def mkcert_certs(mkcert: None) -> typing.AsyncIterator[CertFiles]:
     with TemporaryDirectory() as tmp_dir:
 
         # Create the structure we'll eventually return
@@ -126,7 +123,7 @@ class Server:
         return f"https://{self.host}:{self.port}"
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture
 async def server(mkcert_certs: CertFiles) -> typing.AsyncIterator[Server]:
     async def handler(request: web.Request) -> web.Response:
         # Check the request was served over HTTPS.
@@ -157,6 +154,7 @@ async def server(mkcert_certs: CertFiles) -> typing.AsyncIterator[Server]:
         await runner.cleanup()
 
 
+@pytest.mark.asyncio
 async def test_urllib3_custom_ca(server: Server) -> None:
     def test_urllib3():
         ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
