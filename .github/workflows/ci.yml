@@ -43,10 +43,31 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
 
-      - name: Set Up Python ${{ matrix.python-version }}
+      - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.x
+      
+      - name: Install mkcert on macOS
+        if: runner.os == 'macOS'
+        run: |
+          go install filippo.io/mkcert@v1.4.4
+          # for non-interactive install of root CA
+          sudo security authorizationdb write com.apple.trust-settings.admin allow
+          mkcert -install
+
+      - name: Install mkcert on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          go install filippo.io/mkcert@v1.4.4
+          sudo apt-get install libnss3-tools
+          mkcert -install
 
       - name: Run tests
         run: |
