@@ -46,4 +46,4 @@ def test(session):
 @nox.session
 def docs(session):
     session.install("-rdocs/requirements.txt", ".")
-    session.run("sphinx-build", "-b", "html", "docs/source", "docs/_build")
+    session.run("sphinx-build", "-W", "-b", "html", "docs/source", "docs/_build")

@@ -7,6 +7,7 @@ copyright = f"{datetime.date.today().year}"
 release = version = truststore.__version__
 
 extensions = [
+    "myst_parser",
     "sphinx.ext.intersphinx",
 ]
 
@@ -22,3 +23,5 @@ html_context = {
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None)
 }
+
+nitpicky = True

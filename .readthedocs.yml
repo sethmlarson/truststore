@@ -5,9 +5,11 @@ build:
     python: "3.10"
 
 sphinx:
-   configuration: docs/source/conf.py
+  builder: html
+  configuration: docs/source/conf.py
+  fail_on_warning: true
 
 python:
-   install:
-   - path: .
-   - requirements: docs/requirements.txt
+  install:
+  - path: .
+  - requirements: docs/requirements.txt
