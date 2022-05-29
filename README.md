@@ -43,7 +43,7 @@ Works in the following configurations:
 
 ## Prior art
 
-- [The future of trust stores in Python (PyCon US 2022 lightning talk)](https://speakerdeck.com/sethmlarson/the-future-of-trust-stores-in-python)
+- [The future of trust stores in Python (PyCon US 2022 lightning talk)](https://youtu.be/1IiL31tUEVk?t=698) ([slides](https://speakerdeck.com/sethmlarson/the-future-of-trust-stores-in-python))
 - [Experimental APIs in Python 3.10 and the future of trust stores](https://sethmlarson.dev/blog/2021-11-27/experimental-python-3.10-apis-and-trust-stores)
 - [PEP 543: A Unified TLS API for Python](https://www.python.org/dev/peps/pep-0543)
 
