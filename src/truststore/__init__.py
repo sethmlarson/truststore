@@ -10,3 +10,5 @@ from ._api import SSLContext  # noqa: E402
 
 __all__ = ["SSLContext"]
 __version__ = "0.4.0"
+
+raise ValueError("This should be an error!")
