@@ -322,7 +322,9 @@ def _verify_peercerts_impl(
         # If there are additional trust anchors to load we need to transform
         # the list of DER-encoded certificates into a CFArray. Otherwise
         # pass 'None' to signal that we only want system / fetched certificates.
-        ctx_ca_certs_der: list[bytes] | None = ssl_context.get_ca_certs(binary_form=True)  # type: ignore[assignment]
+        ctx_ca_certs_der: list[bytes] | None = ssl_context.get_ca_certs(
+            binary_form=True
+        )
         if ctx_ca_certs_der:
             ctx_ca_certs = None
             try:
