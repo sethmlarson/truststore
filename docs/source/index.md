@@ -30,14 +30,14 @@ The `truststore` module has a single API: `truststore.SSLContext`
 
 ### Using truststore with pip
 
-Pip v22.2 released with experimental support for verifying certificates with system trust stores with truststore. To enable the feature use the flag `--use-feature=truststore` when installing a package like so:
+Pip v22.2 includes experimental support for verifying certificates with system trust stores using `truststore`. To enable the feature, use the flag `--use-feature=truststore` when installing a package like so:
 
 ```{code-block} bash
    # Install Django using system trust stores
    $ python -m pip install --use-feature=truststore Django
 ```
 
-This requires 'truststore' to be installed in the same environment as the one running pip and to be running Python 3.10 or later. For more information you can read the pip documentation about the feature.
+This requires `truststore` to be installed in the same environment as the one running pip and to be running Python 3.10 or later. For more information you can [read the pip documentation about the feature](https://pip.pypa.io/en/stable/user_guide/#using-system-trust-stores-for-verifying-https).
 
 ### Using truststore with urllib3
 
