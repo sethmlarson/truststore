@@ -21,7 +21,8 @@ html_context = {
 }
 
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None)
+    "python": ("https://docs.python.org/3", None),
+    "urllib3": ("https://urllib3.readthedocs.io/en/stable", None),
 }
 
 nitpicky = True

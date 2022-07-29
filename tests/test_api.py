@@ -10,6 +10,8 @@ from operator import attrgetter
 import aiohttp
 import aiohttp.client_exceptions
 import pytest
+import requests
+import requests.adapters
 import trustme
 import urllib3
 import urllib3.exceptions
@@ -118,6 +120,19 @@ failure_hosts = pytest.mark.parametrize(
 )
 
 
+class SSLContextAdapter(requests.adapters.HTTPAdapter):
+    # HTTPAdapter for Requests that allows for injecting an SSLContext
+    # into the lower-level urllib3.PoolManager.
+    def __init__(self, *, ssl_context=None, **kwargs):
+        self._ssl_context = ssl_context
+        super().__init__(**kwargs)
+
+    def init_poolmanager(self, *args, **kwargs):
+        if self._ssl_context is not None:
+            kwargs.setdefault("ssl_context", self._ssl_context)
+        return super().init_poolmanager(*args, **kwargs)
+
+
 @pytest.fixture(scope="session")
 def trustme_ca():
     ca = trustme.CA()
@@ -209,6 +224,38 @@ async def test_sslcontext_api_failures_async(failure):
 
     # workaround https://github.com/aio-libs/aiohttp/issues/5426
     await asyncio.sleep(0.2)
+
+    assert "cert" in repr(e.value).lower() and "verif" in repr(e.value).lower()
+
+
+@successful_hosts
+def test_requests_sslcontext_api_success(host):
+    if host == "1.1.1.1":
+        pytest.skip("urllib3 doesn't pass server_hostname for IP addresses")
+
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+    with requests.Session() as http:
+        http.mount("https://", SSLContextAdapter(ssl_context=ctx))
+        resp = http.request("GET", f"https://{host}")
+
+    assert resp.status_code == 200
+    assert len(resp.content) > 0
+
+
+@failure_hosts
+def test_requests_sslcontext_api_failures(failure):
+    host = failure.host
+
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    if platform.system() != "Linux":
+        ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
+
+    with requests.Session() as http:
+        http.mount("https://", SSLContextAdapter(ssl_context=ctx))
+
+        with pytest.raises(requests.exceptions.SSLError) as e:
+            http.request("GET", f"https://{host}")
 
     assert "cert" in repr(e.value).lower() and "verif" in repr(e.value).lower()
 
