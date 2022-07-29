@@ -11,13 +11,13 @@ import aiohttp
 import aiohttp.client_exceptions
 import pytest
 import requests
-import requests.adapters
 import trustme
 import urllib3
 import urllib3.exceptions
 from OpenSSL.crypto import X509
 
 import truststore
+from tests import SSLContextAdapter
 
 # Make sure the httpserver doesn't hang
 # if the client drops the connection due to a cert verification error
@@ -118,19 +118,6 @@ if platform.system() != "Linux":
 failure_hosts = pytest.mark.parametrize(
     "failure", failure_hosts_list, ids=attrgetter("host")
 )
-
-
-class SSLContextAdapter(requests.adapters.HTTPAdapter):
-    # HTTPAdapter for Requests that allows for injecting an SSLContext
-    # into the lower-level urllib3.PoolManager.
-    def __init__(self, *, ssl_context=None, **kwargs):
-        self._ssl_context = ssl_context
-        super().__init__(**kwargs)
-
-    def init_poolmanager(self, *args, **kwargs):
-        if self._ssl_context is not None:
-            kwargs.setdefault("ssl_context", self._ssl_context)
-        return super().init_poolmanager(*args, **kwargs)
 
 
 @pytest.fixture(scope="session")
