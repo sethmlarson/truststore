@@ -51,6 +51,8 @@ failure_hosts_list = [
             "certificate has expired",
             # macOS
             "“*.badssl.com” certificate is expired",
+            # macOS with revocation checks
+            "certificates do not meet pinning requirements",
             # Windows
             (
                 "A required certificate is not within its validity period when verifying "
@@ -65,6 +67,8 @@ failure_hosts_list = [
             "self signed certificate",
             # macOS
             "“*.badssl.com” certificate is not trusted",
+            # macOS with revocation checks
+            "certificates do not meet pinning requirements",
             # Windows
             (
                 "A certificate chain processed, but terminated in a root "
@@ -79,6 +83,8 @@ failure_hosts_list = [
             "self signed certificate in certificate chain",
             # macOS
             "“BadSSL Untrusted Root Certificate Authority” certificate is not trusted",
+            # macOS with revocation checks
+            "certificates do not meet pinning requirements",
             # Windows
             (
                 "A certificate chain processed, but terminated in a root "
@@ -93,6 +99,8 @@ failure_hosts_list = [
             "unable to get local issuer certificate",
             # macOS
             "“superfish.badssl.com” certificate is not trusted",
+            # macOS with revocation checks
+            "certificates do not meet pinning requirements",
             # Windows
             (
                 "A certificate chain processed, but terminated in a root "
@@ -134,11 +142,13 @@ def httpserver_ssl_context(trustme_ca):
     return server_context
 
 
-def connect_to_host(host: str, use_server_hostname: bool = True):
+def connect_to_host(
+    host: str, use_server_hostname: bool = True, verify_flags=ssl.VERIFY_CRL_CHECK_CHAIN
+):
     with socket.create_connection((host, 443)) as sock:
         ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        if platform.system() != "Linux":
-            ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
+        if verify_flags and platform.system() != "Linux":
+            ctx.verify_flags |= verify_flags
         with ctx.wrap_socket(
             sock, server_hostname=host if use_server_hostname else None
         ):
@@ -154,6 +164,20 @@ def test_success(host):
 def test_failures(failure):
     with pytest.raises(ssl.SSLCertVerificationError) as e:
         connect_to_host(failure.host)
+
+    error_repr = repr(e.value)
+    assert any(message in error_repr for message in failure.error_messages), error_repr
+
+
+@failure_hosts
+def test_failures_without_revocation_checks(failure):
+    # On macOS with revocation checks required, we get a
+    # "certificates do not meet pinning requirements"
+    # error for some of the badssl certs. So let's also test
+    # with revocation checks disabled and make sure we get the
+    # expected error messages in that case.
+    with pytest.raises(ssl.SSLCertVerificationError) as e:
+        connect_to_host(failure.host, verify_flags=None)
 
     error_repr = repr(e.value)
     assert any(message in error_repr for message in failure.error_messages), error_repr

@@ -68,6 +68,7 @@ CFStringRef = POINTER(CFString)
 CFArrayRef = POINTER(CFArray)
 CFMutableArrayRef = POINTER(CFMutableArray)
 CFArrayCallBacks = c_void_p
+CFOptionFlags = c_uint32
 
 SecCertificateRef = POINTER(c_void_p)
 SecPolicyRef = POINTER(c_void_p)
@@ -94,6 +95,9 @@ try:
     Security.SecTrustEvaluate.argtypes = [SecTrustRef, POINTER(SecTrustResultType)]
     Security.SecTrustEvaluate.restype = OSStatus
 
+    Security.SecPolicyCreateRevocation.argtypes = [CFOptionFlags]
+    Security.SecPolicyCreateRevocation.restype = SecPolicyRef
+
     Security.SecPolicyCreateSSL.argtypes = [Boolean, CFStringRef]
     Security.SecPolicyCreateSSL.restype = SecPolicyRef
 
@@ -116,6 +120,9 @@ try:
     Security.SecTrustRef = SecTrustRef  # type: ignore[attr-defined]
     Security.SecTrustResultType = SecTrustResultType  # type: ignore[attr-defined]
     Security.OSStatus = OSStatus  # type: ignore[attr-defined]
+
+    kSecRevocationUseAnyAvailableMethod = 3
+    kSecRevocationRequirePositiveResponse = 8
 
     CoreFoundation.CFRelease.argtypes = [CFTypeRef]
     CoreFoundation.CFRelease.restype = None
@@ -286,7 +293,7 @@ def _verify_peercerts_impl(
     server_hostname: str | None = None,
 ) -> None:
     certs = None
-    policy = None
+    policies = None
     trust = None
     cf_error = None
     try:
@@ -294,12 +301,29 @@ def _verify_peercerts_impl(
             cf_str_hostname = None
             try:
                 cf_str_hostname = _bytes_to_cf_string(server_hostname.encode("ascii"))
-                policy = Security.SecPolicyCreateSSL(True, cf_str_hostname)
+                ssl_policy = Security.SecPolicyCreateSSL(True, cf_str_hostname)
             finally:
                 if cf_str_hostname:
                     CoreFoundation.CFRelease(cf_str_hostname)
         else:
-            policy = Security.SecPolicyCreateSSL(True, None)
+            ssl_policy = Security.SecPolicyCreateSSL(True, None)
+
+        policies = ssl_policy
+        if ssl_context.verify_flags & ssl.VERIFY_CRL_CHECK_CHAIN:
+            # Add explicit policy requiring positive revocation checks
+            policies = CoreFoundation.CFArrayCreateMutable(
+                CoreFoundation.kCFAllocatorDefault,
+                0,
+                ctypes.byref(CoreFoundation.kCFTypeArrayCallBacks),
+            )
+            CoreFoundation.CFArrayAppendValue(policies, ssl_policy)
+            revocation_policy = Security.SecPolicyCreateRevocation(
+                kSecRevocationUseAnyAvailableMethod
+                | kSecRevocationRequirePositiveResponse
+            )
+            CoreFoundation.CFArrayAppendValue(policies, revocation_policy)
+        elif ssl_context.verify_flags & ssl.VERIFY_CRL_CHECK_LEAF:
+            raise NotImplementedError("VERIFY_CRL_CHECK_LEAF not implemented for macOS")
 
         certs = None
         try:
@@ -309,7 +333,7 @@ def _verify_peercerts_impl(
             # we can finally create a SecTrust object!
             trust = Security.SecTrustRef()
             status = Security.SecTrustCreateWithCertificates(
-                certs, policy, ctypes.byref(trust)
+                certs, policies, ctypes.byref(trust)
             )
             assert status == 0  # TODO: Check status
 
@@ -381,7 +405,7 @@ def _verify_peercerts_impl(
                     CoreFoundation.CFRelease(cf_error_string_ref)
 
     finally:
-        if policy:
-            CoreFoundation.CFRelease(policy)
+        if policies:
+            CoreFoundation.CFRelease(policies)
         if trust:
             CoreFoundation.CFRelease(trust)

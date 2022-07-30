@@ -27,5 +27,6 @@ Home = "https://github.com/sethmlarson/truststore"
 asyncio_mode = "strict"
 filterwarnings = [
   "error",
-  "ignore:'cgi' is deprecated",
+  # 3.11: Pending release of https://github.com/certifi/python-certifi/pull/199
+  "ignore:path is deprecated. Use files",
 ]
