@@ -317,11 +317,13 @@ def _verify_peercerts_impl(
                 ctypes.byref(CoreFoundation.kCFTypeArrayCallBacks),
             )
             CoreFoundation.CFArrayAppendValue(policies, ssl_policy)
+            CoreFoundation.CFRelease(ssl_policy)
             revocation_policy = Security.SecPolicyCreateRevocation(
                 kSecRevocationUseAnyAvailableMethod
                 | kSecRevocationRequirePositiveResponse
             )
             CoreFoundation.CFArrayAppendValue(policies, revocation_policy)
+            CoreFoundation.CFRelease(revocation_policy)
         elif ssl_context.verify_flags & ssl.VERIFY_CRL_CHECK_LEAF:
             raise NotImplementedError("VERIFY_CRL_CHECK_LEAF not implemented for macOS")
 
