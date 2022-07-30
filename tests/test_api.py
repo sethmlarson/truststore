@@ -40,6 +40,8 @@ failure_hosts_list = [
             "Hostname mismatch, certificate is not valid for 'wrong.host.badssl.com'",
             # macOS
             "certificate name does not match",
+            # macOS with revocation checks
+            "certificates do not meet pinning requirements",
             # Windows
             "The certificate's CN name does not match the passed value.",
         ],
@@ -110,6 +112,10 @@ failure_hosts_list = [
     ),
 ]
 
+failure_hosts_no_revocation = pytest.mark.parametrize(
+    "failure", failure_hosts_list.copy(), ids=attrgetter("host")
+)
+
 if platform.system() != "Linux":
     failure_hosts_list.append(
         FailureHost(
@@ -169,7 +175,7 @@ def test_failures(failure):
     assert any(message in error_repr for message in failure.error_messages), error_repr
 
 
-@failure_hosts
+@failure_hosts_no_revocation
 def test_failures_without_revocation_checks(failure):
     # On macOS with revocation checks required, we get a
     # "certificates do not meet pinning requirements"
