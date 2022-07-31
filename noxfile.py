@@ -12,7 +12,7 @@ SOURCE_FILES = (
 
 @nox.session
 def format(session):
-    session.install("black", "isort", "pyupgrade")
+    session.install("black", "isort", "pyupgrade", "tomli")
     session.run("black", *SOURCE_PATHS)
     session.run("isort", "--profile=black", *SOURCE_PATHS)
     session.run(
@@ -24,7 +24,7 @@ def format(session):
 
 @nox.session
 def lint(session):
-    session.install("black", "isort", "flake8", "mypy", "types-certifi")
+    session.install("black", "isort", "flake8", "mypy", "types-certifi", "tomli")
     session.run("flake8", "--ignore=E501,W503", *SOURCE_PATHS)
     session.run("black", "--check", *SOURCE_PATHS)
     session.run("isort", "--check", "--profile=black", *SOURCE_PATHS)

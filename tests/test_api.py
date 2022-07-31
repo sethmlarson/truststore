@@ -10,12 +10,14 @@ from operator import attrgetter
 import aiohttp
 import aiohttp.client_exceptions
 import pytest
+import requests
 import trustme
 import urllib3
 import urllib3.exceptions
 from OpenSSL.crypto import X509
 
 import truststore
+from tests import SSLContextAdapter
 
 # Make sure the httpserver doesn't hang
 # if the client drops the connection due to a cert verification error
@@ -38,6 +40,8 @@ failure_hosts_list = [
             "Hostname mismatch, certificate is not valid for 'wrong.host.badssl.com'",
             # macOS
             "certificate name does not match",
+            # macOS with revocation checks
+            "certificates do not meet pinning requirements",
             # Windows
             "The certificate's CN name does not match the passed value.",
         ],
@@ -49,6 +53,8 @@ failure_hosts_list = [
             "certificate has expired",
             # macOS
             "“*.badssl.com” certificate is expired",
+            # macOS with revocation checks
+            "certificates do not meet pinning requirements",
             # Windows
             (
                 "A required certificate is not within its validity period when verifying "
@@ -63,6 +69,8 @@ failure_hosts_list = [
             "self signed certificate",
             # macOS
             "“*.badssl.com” certificate is not trusted",
+            # macOS with revocation checks
+            "certificates do not meet pinning requirements",
             # Windows
             (
                 "A certificate chain processed, but terminated in a root "
@@ -77,6 +85,8 @@ failure_hosts_list = [
             "self signed certificate in certificate chain",
             # macOS
             "“BadSSL Untrusted Root Certificate Authority” certificate is not trusted",
+            # macOS with revocation checks
+            "certificates do not meet pinning requirements",
             # Windows
             (
                 "A certificate chain processed, but terminated in a root "
@@ -91,6 +101,8 @@ failure_hosts_list = [
             "unable to get local issuer certificate",
             # macOS
             "“superfish.badssl.com” certificate is not trusted",
+            # macOS with revocation checks
+            "certificates do not meet pinning requirements",
             # Windows
             (
                 "A certificate chain processed, but terminated in a root "
@@ -99,6 +111,10 @@ failure_hosts_list = [
         ],
     ),
 ]
+
+failure_hosts_no_revocation = pytest.mark.parametrize(
+    "failure", failure_hosts_list.copy(), ids=attrgetter("host")
+)
 
 if platform.system() != "Linux":
     failure_hosts_list.append(
@@ -132,11 +148,13 @@ def httpserver_ssl_context(trustme_ca):
     return server_context
 
 
-def connect_to_host(host: str, use_server_hostname: bool = True):
+def connect_to_host(
+    host: str, use_server_hostname: bool = True, verify_flags=ssl.VERIFY_CRL_CHECK_CHAIN
+):
     with socket.create_connection((host, 443)) as sock:
         ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        if platform.system() != "Linux":
-            ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
+        if verify_flags and platform.system() != "Linux":
+            ctx.verify_flags |= verify_flags
         with ctx.wrap_socket(
             sock, server_hostname=host if use_server_hostname else None
         ):
@@ -152,6 +170,20 @@ def test_success(host):
 def test_failures(failure):
     with pytest.raises(ssl.SSLCertVerificationError) as e:
         connect_to_host(failure.host)
+
+    error_repr = repr(e.value)
+    assert any(message in error_repr for message in failure.error_messages), error_repr
+
+
+@failure_hosts_no_revocation
+def test_failures_without_revocation_checks(failure):
+    # On macOS with revocation checks required, we get a
+    # "certificates do not meet pinning requirements"
+    # error for some of the badssl certs. So let's also test
+    # with revocation checks disabled and make sure we get the
+    # expected error messages in that case.
+    with pytest.raises(ssl.SSLCertVerificationError) as e:
+        connect_to_host(failure.host, verify_flags=None)
 
     error_repr = repr(e.value)
     assert any(message in error_repr for message in failure.error_messages), error_repr
@@ -209,6 +241,38 @@ async def test_sslcontext_api_failures_async(failure):
 
     # workaround https://github.com/aio-libs/aiohttp/issues/5426
     await asyncio.sleep(0.2)
+
+    assert "cert" in repr(e.value).lower() and "verif" in repr(e.value).lower()
+
+
+@successful_hosts
+def test_requests_sslcontext_api_success(host):
+    if host == "1.1.1.1":
+        pytest.skip("urllib3 doesn't pass server_hostname for IP addresses")
+
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+    with requests.Session() as http:
+        http.mount("https://", SSLContextAdapter(ssl_context=ctx))
+        resp = http.request("GET", f"https://{host}")
+
+    assert resp.status_code == 200
+    assert len(resp.content) > 0
+
+
+@failure_hosts
+def test_requests_sslcontext_api_failures(failure):
+    host = failure.host
+
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    if platform.system() != "Linux":
+        ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
+
+    with requests.Session() as http:
+        http.mount("https://", SSLContextAdapter(ssl_context=ctx))
+
+        with pytest.raises(requests.exceptions.SSLError) as e:
+            http.request("GET", f"https://{host}")
 
     assert "cert" in repr(e.value).lower() and "verif" in repr(e.value).lower()
 

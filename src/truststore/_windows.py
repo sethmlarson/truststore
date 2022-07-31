@@ -353,7 +353,9 @@ def _verify_peercerts_impl(
             # to the SSLContext using load_verify_locations,
             # try verifying using a custom chain engine
             # that trusts the custom CA certs.
-            custom_ca_certs: list[bytes] | None = ssl_context.get_ca_certs(binary_form=True)  # type: ignore[assignment]
+            custom_ca_certs: list[bytes] | None = ssl_context.get_ca_certs(
+                binary_form=True
+            )
             if custom_ca_certs:
                 _verify_using_custom_ca_certs(
                     custom_ca_certs,
@@ -382,7 +384,7 @@ def _get_and_verify_cert_chain(
     ppChainContext = None
     try:
         # Get cert chain
-        ppChainContext = pointer(PCERT_CHAIN_CONTEXT())
+        ppChainContext = pointer(PCERT_CHAIN_CONTEXT())  # type: ignore[call-arg]
         CertGetCertificateChain(
             hChainEngine,  # chain engine
             pPeerCertContext,  # leaf cert context

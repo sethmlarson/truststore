@@ -7,10 +7,12 @@ from tempfile import TemporaryDirectory
 
 import pytest
 import pytest_asyncio
+import requests
 import urllib3
 from aiohttp import ClientSession, web
 
 import truststore
+from tests import SSLContextAdapter
 
 MKCERT_CA_NOT_INSTALLED = b"local CA is not installed in the system trust store"
 MKCERT_CA_ALREADY_INSTALLED = b"local CA is now installed in the system trust store"
@@ -172,3 +174,16 @@ async def test_aiohttp_custom_ca(server: Server) -> None:
     async with ClientSession() as client:
         resp = await client.get(server.base_url, ssl=ctx)
         assert resp.status == 200
+
+
+@pytest.mark.asyncio
+async def test_requests_custom_ca(server: Server) -> None:
+    def test_requests():
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        with requests.Session() as http:
+            http.mount("https://", SSLContextAdapter(ssl_context=ctx))
+            resp = http.request("GET", server.base_url)
+        assert resp.status_code == 200
+
+    thread = asyncio.to_thread(test_requests)
+    await thread
