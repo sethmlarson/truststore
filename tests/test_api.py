@@ -4,6 +4,7 @@ import platform
 import socket
 import ssl
 import tempfile
+import time
 from dataclasses import dataclass
 from operator import attrgetter
 
@@ -296,6 +297,8 @@ def test_trustme_cert_loaded_via_capath(trustme_ca, httpserver):
             certfile.write(trustme_ca.cert_pem.bytes())
         cert_hash = X509.from_cryptography(trustme_ca._certificate).subject_name_hash()
         os.symlink(f"{capath}/cert.pem", f"{capath}/{cert_hash:x}.0")
+        time.sleep(1)
+
         ctx.load_verify_locations(capath=capath)
 
         httpserver.expect_request("/", method="GET").respond_with_json({})
