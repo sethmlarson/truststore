@@ -4,7 +4,10 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "truststore"
-authors = [{name = "Seth Michael Larson", email = "sethmichaellarson@gmail.com"}]
+authors = [
+  {name = "Seth Michael Larson", email = "sethmichaellarson@gmail.com"},
+  {name = "David Glick", email = "david@glicksoftware.com"}
+]
 readme = "README.md"
 license = {file = "LICENSE"}
 classifiers = [
@@ -16,12 +19,14 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
 ]
 dynamic = ["version", "description"]
 requires-python = ">= 3.10"
 
 [project.urls]
-Home = "https://github.com/sethmlarson/truststore"
+Source = "https://github.com/sethmlarson/truststore"
+Documentation = "https://truststore.readthedocs.io"
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
