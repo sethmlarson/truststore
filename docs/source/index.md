@@ -46,10 +46,11 @@ You can use it anywhere you would use an {py:class}`ssl.SSLContext` and
 system trust stores are automatically used to verify peer certificates:
 
 ```{code-block} python
+   import ssl
    import urllib3
    import truststore
 
-   ctx = truststore.SSLContext()
+   ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
    http = urllib3.PoolManager(ssl_context=ctx)
    resp = http.request("GET", "https://example.com")
@@ -60,10 +61,11 @@ system trust stores are automatically used to verify peer certificates:
 Truststore supports wrapping either {py:class}`socket.socket` or {py:class}`ssl.MemoryBIO` which means both synchronous and asynchronous I/O can be used:
 
 ```{code-block} python
+   import ssl
    import aiohttp
    import truststore
 
-   ctx = truststore.SSLContext()
+   ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
    http = aiohttp.ClientSession(ssl=ctx)
    resp = await http.request("GET", "https://example.com")
@@ -74,6 +76,7 @@ Truststore supports wrapping either {py:class}`socket.socket` or {py:class}`ssl.
 Requests doesn't support passing an {py:class}`ssl.SSLContext` object to a `requests.Session` object directly so there's an additional class you need to inject the `truststore.SSLContext` instance to the lower-level {py:class}`urllib3.PoolManager` instance:
 
 ```{code-block} python
+   import ssl
    import requests
    import requests.adapters
    import truststore
@@ -88,7 +91,7 @@ Requests doesn't support passing an {py:class}`ssl.SSLContext` object to a `requ
                kwargs.setdefault("ssl_context", self._ssl_context)
            return super().init_poolmanager(*args, **kwargs)
 
-   ctx = truststore.SSLContext()
+   ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
    http = requests.Session()
    adapter = SSLContextAdapter(ssl_context=ctx)
