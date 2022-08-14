@@ -1,4 +1,5 @@
 import glob
+import os
 
 import nox
 
@@ -8,6 +9,10 @@ SOURCE_FILES = (
     + glob.glob("src/**/*.py", recursive=True)
     + glob.glob("tests/**/*.py", recursive=True)
 )
+# Run in the current Python environment on CI
+# (where there's a matrix of jobs using different Pythons)
+# but test multiple versions locally
+PYTHONS = None if os.environ.get("CI") else ["3.10", "3.11"]
 
 
 @nox.session
@@ -31,7 +36,7 @@ def lint(session):
     session.run("mypy", "--strict", "--show-error-codes", "src/")
 
 
-@nox.session(python=["3.10", "3.11"])
+@nox.session(python=PYTHONS)
 def test(session):
     # work around issues building Cython-based extensions for prerelease Python versions
     session.env["AIOHTTP_NO_EXTENSIONS"] = "1"
