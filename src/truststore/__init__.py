@@ -9,4 +9,4 @@ del _sys
 from ._api import SSLContext  # noqa: E402
 
 __all__ = ["SSLContext"]
-__version__ = "0.4.0"
+__version__ = "0.5.0"
