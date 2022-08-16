@@ -13,6 +13,7 @@ from ctypes import (
     c_void_p,
 )
 from ctypes.util import find_library
+from typing import Any
 
 _mac_version = platform.mac_ver()[0]
 _mac_version_info = tuple(map(int, _mac_version.split(".")))
@@ -114,9 +115,6 @@ try:
     ]
     Security.SecTrustGetTrustResult.restype = OSStatus
 
-    Security.SecCopyErrorMessageString.argtypes = [OSStatus, c_void_p]
-    Security.SecCopyErrorMessageString.restype = CFStringRef
-
     Security.SecTrustRef = SecTrustRef  # type: ignore[attr-defined]
     Security.SecTrustResultType = SecTrustResultType  # type: ignore[attr-defined]
     Security.OSStatus = OSStatus  # type: ignore[attr-defined]
@@ -201,6 +199,64 @@ try:
 
 except AttributeError:
     raise ImportError("Error initializing ctypes") from None
+
+
+def _handle_osstatus(result: OSStatus, _: Any, args: Any) -> Any:
+    """
+    Raises an error if the OSStatus value is non-zero.
+    """
+    if int(result) == 0:
+        return args
+
+    # Returns a CFString which we need to transform
+    # into a UTF-8 Python string.
+    error_message_cfstring = None
+    try:
+        error_message_cfstring = Security.SecCopyErrorMessageString(result, None)
+
+        # First step is convert the CFString into a C string pointer.
+        # We try the fast no-copy way first.
+        error_message_cfstring_c_void_p = ctypes.cast(
+            error_message_cfstring, ctypes.POINTER(ctypes.c_void_p)
+        )
+        message = CoreFoundation.CFStringGetCStringPtr(
+            error_message_cfstring_c_void_p, CFConst.kCFStringEncodingUTF8
+        )
+
+        # Quoting the Apple dev docs:
+        #
+        # "A pointer to a C string or NULL if the internal
+        # storage of theString does not allow this to be
+        # returned efficiently."
+        #
+        # So we need to get our hands dirty.
+        if message is None:
+            buffer = ctypes.create_string_buffer(1024)
+            result = CoreFoundation.CFStringGetCString(
+                error_message_cfstring_c_void_p,
+                buffer,
+                1024,
+                CFConst.kCFStringEncodingUTF8,
+            )
+            if not result:
+                raise OSError("Error copying C string from CFStringRef")
+            message = buffer.value
+
+    finally:
+        if error_message_cfstring is not None:
+            CoreFoundation.CFRelease(error_message_cfstring)
+
+    # If no message can be found for this status we come
+    # up with a generic one that forwards the status code.
+    if message is None or message == "":
+        message = f"SecureTransport operation returned a non-zero OSStatus: {result}"
+
+    raise ssl.SSLError(message)
+
+
+Security.SecTrustCreateWithCertificates.errcheck = _handle_osstatus  # type: ignore[assignment,misc]
+Security.SecTrustSetAnchorCertificates.errcheck = _handle_osstatus  # type: ignore[assignment,misc]
+Security.SecTrustGetTrustResult.errcheck = _handle_osstatus  # type: ignore[assignment,misc]
 
 
 class CFConst:
@@ -334,10 +390,9 @@ def _verify_peercerts_impl(
             # Now that we have certificates loaded and a SecPolicy
             # we can finally create a SecTrust object!
             trust = Security.SecTrustRef()
-            status = Security.SecTrustCreateWithCertificates(
+            Security.SecTrustCreateWithCertificates(
                 certs, policies, ctypes.byref(trust)
             )
-            assert status == 0  # TODO: Check status
 
         finally:
             # The certs are now being held by SecTrust so we can
@@ -355,13 +410,12 @@ def _verify_peercerts_impl(
             ctx_ca_certs = None
             try:
                 ctx_ca_certs = _der_certs_to_cf_cert_array(cert_chain)
-                status = Security.SecTrustSetAnchorCertificates(trust, ctx_ca_certs)
+                Security.SecTrustSetAnchorCertificates(trust, ctx_ca_certs)
             finally:
                 if ctx_ca_certs:
                     CoreFoundation.CFRelease(ctx_ca_certs)
         else:
-            status = Security.SecTrustSetAnchorCertificates(trust, None)
-        assert status == 0  # TODO: Check status
+            Security.SecTrustSetAnchorCertificates(trust, None)
 
         cf_error = CoreFoundation.CFErrorRef()
         sec_trust_eval_result = Security.SecTrustEvaluateWithError(
@@ -393,10 +447,9 @@ def _verify_peercerts_impl(
                 # TODO: Not sure if we need the SecTrustResultType for anything?
                 # We only care whether or not it's a success or failure for now.
                 sec_trust_result_type = Security.SecTrustResultType()
-                status = Security.SecTrustGetTrustResult(
+                Security.SecTrustGetTrustResult(
                     trust, ctypes.byref(sec_trust_result_type)
                 )
-                assert status == 0  # TODO: Check status
 
                 err = ssl.SSLCertVerificationError(cf_error_message)
                 err.verify_message = cf_error_message
