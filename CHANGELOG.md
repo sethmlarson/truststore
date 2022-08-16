@@ -1,3 +1,12 @@
+# 0.5.0
+
+* **Support for using truststore was released with pip v22.2**!
+  You can [read more here](https://sethmlarson.dev/blog/help-test-system-trust-stores-in-python) about how to help us test truststore.
+* Added David Glick as an author in packaging metadata.
+* Added documentation for how to use `truststore` with urllib3, Requests, aiohttp, and pip.
+* Changed macOS SecureTransport error handling to raise as `ssl.SSLError` with
+  message from the OS.
+
 # 0.4.0
 
 * Added more descriptive error messages to `ssl.SSLCertVerificationError` determined by the OS on macOS and Windows.
