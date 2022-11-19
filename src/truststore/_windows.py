@@ -78,7 +78,7 @@ class CERT_CHAIN_PARA(Structure):
 
 
 if TYPE_CHECKING:
-    PCERT_CHAIN_PARA = pointer[CERT_CHAIN_PARA]
+    PCERT_CHAIN_PARA = pointer[CERT_CHAIN_PARA]  # type: ignore[misc]
 else:
     PCERT_CHAIN_PARA = POINTER(CERT_CHAIN_PARA)
 
@@ -377,14 +377,14 @@ def _get_and_verify_cert_chain(
     hChainEngine: HCERTCHAINENGINE | None,
     hIntermediateCertStore: HCERTSTORE,
     pPeerCertContext: c_void_p,
-    pChainPara: PCERT_CHAIN_PARA,
+    pChainPara: PCERT_CHAIN_PARA,  # type: ignore[valid-type]
     server_hostname: str | None,
     chain_flags: int,
 ) -> None:
     ppChainContext = None
     try:
         # Get cert chain
-        ppChainContext = pointer(PCERT_CHAIN_CONTEXT())  # type: ignore[call-arg]
+        ppChainContext = pointer(PCERT_CHAIN_CONTEXT())
         CertGetCertificateChain(
             hChainEngine,  # chain engine
             pPeerCertContext,  # leaf cert context
@@ -459,7 +459,7 @@ def _verify_using_custom_ca_certs(
     custom_ca_certs: list[bytes],
     hIntermediateCertStore: HCERTSTORE,
     pPeerCertContext: c_void_p,
-    pChainPara: PCERT_CHAIN_PARA,
+    pChainPara: PCERT_CHAIN_PARA,  # type: ignore[valid-type]
     server_hostname: str | None,
     chain_flags: int,
 ) -> None:

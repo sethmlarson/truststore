@@ -66,6 +66,7 @@ failure_hosts_list = [
         host="self-signed.badssl.com",
         error_messages=[
             # OpenSSL
+            "self-signed certificate",
             "self signed certificate",
             # macOS
             "“*.badssl.com” certificate is not trusted",
@@ -82,6 +83,7 @@ failure_hosts_list = [
         host="untrusted-root.badssl.com",
         error_messages=[
             # OpenSSL
+            "self-signed certificate in certificate chain",
             "self signed certificate in certificate chain",
             # macOS
             "“BadSSL Untrusted Root Certificate Authority” certificate is not trusted",
@@ -122,9 +124,13 @@ if platform.system() != "Linux":
             host="revoked.badssl.com",
             error_messages=[
                 # macOS
-                "“revoked.badssl.com” certificate is revoked",
+                # "“revoked.badssl.com” certificate is revoked",
                 # Windows
-                "The certificate is revoked.",
+                # "The certificate is revoked.",
+                # TODO: Temporary while certificate is expired on badssl.com.
+                # Test will start failing against once the certificate is fixed.
+                '"revoked.badssl.com","RapidSSL TLS DV RSA Mixed SHA256 2020 CA-1","DigiCert Global Root CA" certificates do not meet pinning requirements',
+                "A required certificate is not within its validity period when verifying against the current system clock or the timestamp in the signed file.",
             ],
         )
     )
@@ -195,7 +201,7 @@ def test_sslcontext_api_success(host):
         pytest.skip("urllib3 doesn't pass server_hostname for IP addresses")
 
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    with urllib3.PoolManager(ssl_context=ctx) as http:
+    with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
         resp = http.request("GET", f"https://{host}")
     assert resp.status == 200
     assert len(resp.data) > 0
@@ -296,6 +302,8 @@ def test_trustme_cert_loaded_via_capath(trustme_ca, httpserver):
             certfile.write(trustme_ca.cert_pem.bytes())
         cert_hash = X509.from_cryptography(trustme_ca._certificate).subject_name_hash()
         os.symlink(f"{capath}/cert.pem", f"{capath}/{cert_hash:x}.0")
+        assert set(os.listdir(capath)) == {"cert.pem", f"{cert_hash:x}.0"}
+
         ctx.load_verify_locations(capath=capath)
 
         httpserver.expect_request("/", method="GET").respond_with_json({})

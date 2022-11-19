@@ -80,7 +80,9 @@ class SSLContext(ssl.SSLContext):
         capath: str | bytes | os.PathLike[str] | os.PathLike[bytes] | None = None,
         cadata: str | bytes | None = None,
     ) -> None:
-        return self._ctx.load_verify_locations(cafile, capath, cadata)
+        return self._ctx.load_verify_locations(
+            cafile=cafile, capath=capath, cadata=cadata
+        )
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._ctx, name)
