@@ -66,6 +66,7 @@ failure_hosts_list = [
         host="self-signed.badssl.com",
         error_messages=[
             # OpenSSL
+            "self-signed certificate",
             "self signed certificate",
             # macOS
             "“*.badssl.com” certificate is not trusted",
@@ -82,6 +83,7 @@ failure_hosts_list = [
         host="untrusted-root.badssl.com",
         error_messages=[
             # OpenSSL
+            "self-signed certificate in certificate chain",
             "self signed certificate in certificate chain",
             # macOS
             "“BadSSL Untrusted Root Certificate Authority” certificate is not trusted",
