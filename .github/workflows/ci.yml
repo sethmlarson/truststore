@@ -5,6 +5,8 @@ on:
     branches:
       - main
   pull_request:
+  schedule:
+    - cron: '7 5 * * *'
 
 defaults:
   run:
