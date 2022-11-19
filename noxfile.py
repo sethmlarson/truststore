@@ -12,7 +12,7 @@ SOURCE_FILES = (
 # Run in the current Python environment on CI
 # (where there's a matrix of jobs using different Pythons)
 # but test multiple versions locally
-PYTHONS = None if os.environ.get("CI") else ["3.10", "3.11"]
+PYTHONS = None if os.environ.get("CI") else ["3.10", "3.11", "3.12"]
 
 
 @nox.session
