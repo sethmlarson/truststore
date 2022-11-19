@@ -45,7 +45,15 @@ def test(session):
 
     session.install("-rdev-requirements.txt", ".")
     session.run("pip", "freeze")
-    session.run("pytest", "-v", "-s", "-rs", *(session.posargs or ("tests/",)))
+    session.run(
+        "pytest",
+        "-v",
+        "-s",
+        "-rs",
+        "--no-flaky-report",
+        "--max-runs=3",
+        *(session.posargs or ("tests/",))
+    )
 
 
 @nox.session

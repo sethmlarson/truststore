@@ -19,6 +19,8 @@ from OpenSSL.crypto import X509
 import truststore
 from tests import SSLContextAdapter
 
+pytestmark = pytest.mark.flaky
+
 # Make sure the httpserver doesn't hang
 # if the client drops the connection due to a cert verification error
 socket.setdefaulttimeout(10)
