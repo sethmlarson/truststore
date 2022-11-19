@@ -302,6 +302,8 @@ def test_trustme_cert_loaded_via_capath(trustme_ca, httpserver):
             certfile.write(trustme_ca.cert_pem.bytes())
         cert_hash = X509.from_cryptography(trustme_ca._certificate).subject_name_hash()
         os.symlink(f"{capath}/cert.pem", f"{capath}/{cert_hash:x}.0")
+        assert set(os.listdir(capath)) == {"cert.pem", f"{cert_hash:x}.0"}
+
         ctx.load_verify_locations(capath=capath)
 
         httpserver.expect_request("/", method="GET").respond_with_json({})
