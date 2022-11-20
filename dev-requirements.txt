@@ -6,3 +6,4 @@ pytest-httpserver
 urllib3
 trustme
 requests
+flaky
