@@ -38,7 +38,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
-        python-version: ["3.10", "3.11-dev"]
+        python-version: ["3.10", "3.11", "3.12-dev"]
 
     runs-on: ${{ matrix.os }}
     name: ${{ fromJson('{"macos-latest":"macOS","windows-latest":"Windows","ubuntu-latest":"Ubuntu"}')[matrix.os] }} Python ${{ matrix.python-version }}
@@ -95,10 +95,10 @@ jobs:
           repository: pypa/pip
           path: pip
 
-      - name: Setup Python 3.10
+      - name: Setup Python 3.11
         uses: actions/setup-python@v3
         with:
-          python-version: "3.10"
+          python-version: "3.11"
 
       - name: Patch tests to install local copy of truststore
         working-directory: "${{ github.workspace }}/pip"
@@ -109,6 +109,6 @@ jobs:
         working-directory: "${{ github.workspace }}/pip"
         run: |
           python -m pip install nox
-          nox -s test-3.10 -- \
+          nox -s test-3.11 -- \
             -m integration \
             tests/functional/test_truststore.py
