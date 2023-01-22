@@ -1,6 +1,8 @@
+import contextlib
 import ctypes
 import platform
 import ssl
+import typing
 from ctypes import (
     CDLL,
     POINTER,
@@ -13,7 +15,6 @@ from ctypes import (
     c_void_p,
 )
 from ctypes.util import find_library
-from typing import Any
 
 _mac_version = platform.mac_ver()[0]
 _mac_version_info = tuple(map(int, _mac_version.split(".")))
@@ -201,7 +202,7 @@ except AttributeError:
     raise ImportError("Error initializing ctypes") from None
 
 
-def _handle_osstatus(result: OSStatus, _: Any, args: Any) -> Any:
+def _handle_osstatus(result: OSStatus, _: typing.Any, args: typing.Any) -> typing.Any:
     """
     Raises an error if the OSStatus value is non-zero.
     """
@@ -338,9 +339,15 @@ def _der_certs_to_cf_cert_array(certs: list[bytes]) -> CFMutableArrayRef:  # typ
     return cf_array  # type: ignore[no-any-return]
 
 
-def _configure_context(ctx: ssl.SSLContext) -> None:
+@contextlib.contextmanager
+def _configure_context(ctx: ssl.SSLContext) -> typing.Iterator[None]:
+    values = ctx.check_hostname, ctx.verify_mode
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
+    try:
+        yield
+    finally:
+        ctx.check_hostname, ctx.verify_mode = values
 
 
 def _verify_peercerts_impl(

@@ -23,7 +23,6 @@ class SSLContext(ssl.SSLContext):
 
     def __init__(self, protocol: int = ssl.PROTOCOL_TLS) -> None:
         self._ctx = ssl.SSLContext(protocol)
-        _configure_context(self._ctx)
 
         class TruststoreSSLObject(ssl.SSLObject):
             # This object exists because wrap_bio() doesn't
@@ -46,14 +45,18 @@ class SSLContext(ssl.SSLContext):
         server_hostname: str | None = None,
         session: ssl.SSLSession | None = None,
     ) -> ssl.SSLSocket:
-        ssl_sock = self._ctx.wrap_socket(
-            sock,
-            server_side=server_side,
-            server_hostname=server_hostname,
-            do_handshake_on_connect=do_handshake_on_connect,
-            suppress_ragged_eofs=suppress_ragged_eofs,
-            session=session,
-        )
+        # Use a context manager here because the
+        # inner SSLContext holds on to our state
+        # but also does the actual handshake.
+        with _configure_context(self._ctx):
+            ssl_sock = self._ctx.wrap_socket(
+                sock,
+                server_side=server_side,
+                server_hostname=server_hostname,
+                do_handshake_on_connect=do_handshake_on_connect,
+                suppress_ragged_eofs=suppress_ragged_eofs,
+                session=session,
+            )
         try:
             _verify_peercerts(ssl_sock, server_hostname=server_hostname)
         except ssl.SSLError:
@@ -69,13 +72,14 @@ class SSLContext(ssl.SSLContext):
         server_hostname: str | None = None,
         session: ssl.SSLSession | None = None,
     ) -> ssl.SSLObject:
-        ssl_obj = self._ctx.wrap_bio(
-            incoming,
-            outgoing,
-            server_hostname=server_hostname,
-            server_side=server_side,
-            session=session,
-        )
+        with _configure_context(self._ctx):
+            ssl_obj = self._ctx.wrap_bio(
+                incoming,
+                outgoing,
+                server_hostname=server_hostname,
+                server_side=server_side,
+                session=session,
+            )
         return ssl_obj
 
     def load_verify_locations(
