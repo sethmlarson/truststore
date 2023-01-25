@@ -265,6 +265,11 @@ class CFConst:
 
     kCFStringEncodingUTF8 = CFStringEncoding(0x08000100)
 
+    errSecIncompleteCertRevocationCheck = -67635
+    errSecHostNameMismatch = -67602
+    errSecCertificateExpired = -67818
+    errSecNotTrusted = -67843
+
 
 def _bytes_to_cf_data_ref(value: bytes) -> CFDataRef:  # type: ignore[valid-type]
     return CoreFoundation.CFDataCreate(  # type: ignore[no-any-return]
@@ -439,8 +444,27 @@ def _verify_peercerts_impl(
                 f"Unknown result from Security.SecTrustEvaluateWithError: {sec_trust_eval_result!r}"
             )
 
+        cf_error_code = 0
         if not is_trusted:
             cf_error_code = CoreFoundation.CFErrorGetCode(cf_error)
+
+            # If the error is a known failure that we're
+            # explicitly okay with from SSLContext configuration
+            # we can set is_trusted accordingly.
+            if ssl_context.verify_mode != ssl.CERT_REQUIRED and (
+                cf_error_code == CFConst.errSecNotTrusted
+                or cf_error_code == CFConst.errSecCertificateExpired
+            ):
+                is_trusted = True
+            elif (
+                not ssl_context.check_hostname
+                and cf_error_code == CFConst.errSecHostNameMismatch
+            ):
+                is_trusted = True
+
+        # If we're still not trusted then we start to
+        # construct and raise the SSLCertVerificationError.
+        if not is_trusted:
             cf_error_string_ref = None
             try:
                 cf_error_string_ref = CoreFoundation.CFErrorCopyDescription(cf_error)
