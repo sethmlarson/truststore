@@ -1,10 +1,14 @@
+import array
+import ctypes
+import mmap
 import os
+import pickle
 import platform
 import socket
 import ssl
 import typing
 
-from _ssl import ENCODING_DER  # type: ignore[import]
+import _ssl  # type: ignore[import]
 
 if platform.system() == "Windows":
     from ._windows import _configure_context, _verify_peercerts_impl
@@ -13,16 +17,58 @@ elif platform.system() == "Darwin":
 else:
     from ._openssl import _configure_context, _verify_peercerts_impl
 
+# Hold on to the original class so we can create it consistently
+# even if we inject our own SSLContext into the ssl module.
+_original_SSLContext = ssl.SSLContext
 
+# From typeshed/stdlib/ssl.pyi
 _StrOrBytesPath: typing.TypeAlias = str | bytes | os.PathLike[str] | os.PathLike[bytes]
 _PasswordType: typing.TypeAlias = str | bytes | typing.Callable[[], str | bytes]
+
+# From typeshed/stdlib/_typeshed/__init__.py
+_ReadableBuffer: typing.TypeAlias = typing.Union[
+    bytes,
+    memoryview,
+    bytearray,
+    "array.array[typing.Any]",
+    mmap.mmap,
+    "ctypes._CData",
+    pickle.PickleBuffer,
+]
+
+
+def inject_into_ssl() -> None:
+    """Injects the :class:`truststore.SSLContext` into the ``ssl``
+    module by replacing :class:`ssl.SSLContext`.
+    """
+    setattr(ssl, "SSLContext", SSLContext)
+    # urllib3 holds on to its own reference of ssl.SSLContext
+    # so we need to replace that reference too.
+    try:
+        import urllib3.util.ssl_ as urllib3_ssl
+
+        setattr(urllib3_ssl, "SSLContext", SSLContext)
+    except ImportError:
+        pass
+
+
+def extract_from_ssl() -> None:
+    """Restores the :class:`ssl.SSLContext` class to its original state"""
+    setattr(ssl, "SSLContext", _original_SSLContext)
+    try:
+        import urllib3.util.ssl_ as urllib3_ssl
+
+        urllib3_ssl.SSLContext = _original_SSLContext
+    except ImportError:
+        pass
 
 
 class SSLContext(ssl.SSLContext):
     """SSLContext API that uses system certificates on all platforms"""
 
-    def __init__(self, protocol: int = ssl.PROTOCOL_TLS) -> None:
-        self._ctx = ssl.SSLContext(protocol)
+    def __init__(self, protocol: int = None) -> None:  # type: ignore[assignment]
+        self._ctx = _original_SSLContext(protocol)
+        _configure_context(self._ctx)
 
         class TruststoreSSLObject(ssl.SSLObject):
             # This object exists because wrap_bio() doesn't
@@ -86,7 +132,7 @@ class SSLContext(ssl.SSLContext):
         self,
         cafile: str | bytes | os.PathLike[str] | os.PathLike[bytes] | None = None,
         capath: str | bytes | os.PathLike[str] | os.PathLike[bytes] | None = None,
-        cadata: str | bytes | None = None,
+        cadata: str | _ReadableBuffer | None = None,
     ) -> None:
         return self._ctx.load_verify_locations(
             cafile=cafile, capath=capath, cadata=cadata
@@ -188,7 +234,9 @@ class SSLContext(ssl.SSLContext):
 
     @options.setter
     def options(self, value: ssl.Options) -> None:
-        self._ctx.options = value
+        super(_original_SSLContext, _original_SSLContext).options.__set__(  # type: ignore[attr-defined]
+            self._ctx, value
+        )
 
     @property
     def post_handshake_auth(self) -> bool:
@@ -212,7 +260,9 @@ class SSLContext(ssl.SSLContext):
 
     @verify_flags.setter
     def verify_flags(self, value: ssl.VerifyFlags) -> None:
-        self._ctx.verify_flags = value
+        super(_original_SSLContext, _original_SSLContext).verify_flags.__set__(  # type: ignore[attr-defined]
+            self._ctx, value
+        )
 
     @property
     def verify_mode(self) -> ssl.VerifyMode:
@@ -220,7 +270,9 @@ class SSLContext(ssl.SSLContext):
 
     @verify_mode.setter
     def verify_mode(self, value: ssl.VerifyMode) -> None:
-        self._ctx.verify_mode = value
+        super(_original_SSLContext, _original_SSLContext).verify_mode.__set__(  # type: ignore[attr-defined]
+            self._ctx, value
+        )
 
 
 def _verify_peercerts(
@@ -237,9 +289,13 @@ def _verify_peercerts(
     except AttributeError:
         pass
 
-    cert_bytes = [
-        cert.public_bytes(ENCODING_DER) for cert in sslobj.get_unverified_chain()  # type: ignore[attr-defined]
-    ]
+    # SSLObject.get_unverified_chain() returns 'None'
+    # if the peer sends no certificates. This is common
+    # for the server-side scenario.
+    unverified_chain: typing.Sequence[_ssl.Certificate] = (
+        sslobj.get_unverified_chain() or ()  # type: ignore[attr-defined]
+    )
+    cert_bytes = [cert.public_bytes(_ssl.ENCODING_DER) for cert in unverified_chain]
     _verify_peercerts_impl(
         sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
     )

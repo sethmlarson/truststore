@@ -458,7 +458,6 @@ def _get_and_verify_cert_chain(
         # Check status
         error_code = policy_status.dwError
         if error_code:
-
             # Try getting a human readable message for an error code.
             error_message_buf = create_unicode_buffer(1024)
             error_message_chars = FormatMessageW(

@@ -255,9 +255,9 @@ def _handle_osstatus(result: OSStatus, _: typing.Any, args: typing.Any) -> typin
     raise ssl.SSLError(message)
 
 
-Security.SecTrustCreateWithCertificates.errcheck = _handle_osstatus  # type: ignore[assignment,misc]
-Security.SecTrustSetAnchorCertificates.errcheck = _handle_osstatus  # type: ignore[assignment,misc]
-Security.SecTrustGetTrustResult.errcheck = _handle_osstatus  # type: ignore[assignment,misc]
+Security.SecTrustCreateWithCertificates.errcheck = _handle_osstatus  # type: ignore[assignment]
+Security.SecTrustSetAnchorCertificates.errcheck = _handle_osstatus  # type: ignore[assignment]
+Security.SecTrustGetTrustResult.errcheck = _handle_osstatus  # type: ignore[assignment]
 
 
 class CFConst:
