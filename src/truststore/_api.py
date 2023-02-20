@@ -2,7 +2,7 @@ import os
 import platform
 import socket
 import ssl
-from typing import Any
+import typing
 
 from _ssl import ENCODING_DER  # type: ignore[import]
 
@@ -14,12 +14,15 @@ else:
     from ._openssl import _configure_context, _verify_peercerts_impl
 
 
+_StrOrBytesPath: typing.TypeAlias = str | bytes | os.PathLike[str] | os.PathLike[bytes]
+_PasswordType: typing.TypeAlias = str | bytes | typing.Callable[[], str | bytes]
+
+
 class SSLContext(ssl.SSLContext):
     """SSLContext API that uses system certificates on all platforms"""
 
     def __init__(self, protocol: int = ssl.PROTOCOL_TLS) -> None:
         self._ctx = ssl.SSLContext(protocol)
-        _configure_context(self._ctx)
 
         class TruststoreSSLObject(ssl.SSLObject):
             # This object exists because wrap_bio() doesn't
@@ -42,14 +45,18 @@ class SSLContext(ssl.SSLContext):
         server_hostname: str | None = None,
         session: ssl.SSLSession | None = None,
     ) -> ssl.SSLSocket:
-        ssl_sock = self._ctx.wrap_socket(
-            sock,
-            server_side=server_side,
-            server_hostname=server_hostname,
-            do_handshake_on_connect=do_handshake_on_connect,
-            suppress_ragged_eofs=suppress_ragged_eofs,
-            session=session,
-        )
+        # Use a context manager here because the
+        # inner SSLContext holds on to our state
+        # but also does the actual handshake.
+        with _configure_context(self._ctx):
+            ssl_sock = self._ctx.wrap_socket(
+                sock,
+                server_side=server_side,
+                server_hostname=server_hostname,
+                do_handshake_on_connect=do_handshake_on_connect,
+                suppress_ragged_eofs=suppress_ragged_eofs,
+                session=session,
+            )
         try:
             _verify_peercerts(ssl_sock, server_hostname=server_hostname)
         except ssl.SSLError:
@@ -65,13 +72,14 @@ class SSLContext(ssl.SSLContext):
         server_hostname: str | None = None,
         session: ssl.SSLSession | None = None,
     ) -> ssl.SSLObject:
-        ssl_obj = self._ctx.wrap_bio(
-            incoming,
-            outgoing,
-            server_hostname=server_hostname,
-            server_side=server_side,
-            session=session,
-        )
+        with _configure_context(self._ctx):
+            ssl_obj = self._ctx.wrap_bio(
+                incoming,
+                outgoing,
+                server_hostname=server_hostname,
+                server_side=server_side,
+                session=session,
+            )
         return ssl_obj
 
     def load_verify_locations(
@@ -84,14 +92,135 @@ class SSLContext(ssl.SSLContext):
             cafile=cafile, capath=capath, cadata=cadata
         )
 
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._ctx, name)
+    def load_cert_chain(
+        self,
+        certfile: _StrOrBytesPath,
+        keyfile: _StrOrBytesPath | None = None,
+        password: _PasswordType | None = None,
+    ) -> None:
+        return self._ctx.load_cert_chain(
+            certfile=certfile, keyfile=keyfile, password=password
+        )
 
-    def __setattr__(self, name: str, value: Any) -> None:
-        if name == "verify_flags":
-            self._ctx.verify_flags = value
-        else:
-            return super().__setattr__(name, value)
+    def load_default_certs(
+        self, purpose: ssl.Purpose = ssl.Purpose.SERVER_AUTH
+    ) -> None:
+        return self._ctx.load_default_certs(purpose)
+
+    def set_alpn_protocols(self, alpn_protocols: typing.Iterable[str]) -> None:
+        return self._ctx.set_alpn_protocols(alpn_protocols)
+
+    def set_npn_protocols(self, npn_protocols: typing.Iterable[str]) -> None:
+        return self._ctx.set_npn_protocols(npn_protocols)
+
+    def set_ciphers(self, __cipherlist: str) -> None:
+        return self._ctx.set_ciphers(__cipherlist)
+
+    def get_ciphers(self) -> typing.Any:
+        return self._ctx.get_ciphers()
+
+    def session_stats(self) -> dict[str, int]:
+        return self._ctx.session_stats()
+
+    def cert_store_stats(self) -> dict[str, int]:
+        raise NotImplementedError()
+
+    @typing.overload
+    def get_ca_certs(
+        self, binary_form: typing.Literal[False] = ...
+    ) -> list[typing.Any]:
+        ...
+
+    @typing.overload
+    def get_ca_certs(self, binary_form: typing.Literal[True] = ...) -> list[bytes]:
+        ...
+
+    @typing.overload
+    def get_ca_certs(self, binary_form: bool = ...) -> typing.Any:
+        ...
+
+    def get_ca_certs(self, binary_form: bool = False) -> list[typing.Any] | list[bytes]:
+        raise NotImplementedError()
+
+    @property
+    def check_hostname(self) -> bool:
+        return self._ctx.check_hostname
+
+    @check_hostname.setter
+    def check_hostname(self, value: bool) -> None:
+        self._ctx.check_hostname = value
+
+    @property
+    def hostname_checks_common_name(self) -> bool:
+        return self._ctx.hostname_checks_common_name
+
+    @hostname_checks_common_name.setter
+    def hostname_checks_common_name(self, value: bool) -> None:
+        self._ctx.hostname_checks_common_name = value
+
+    @property
+    def keylog_filename(self) -> str:
+        return self._ctx.keylog_filename
+
+    @keylog_filename.setter
+    def keylog_filename(self, value: str) -> None:
+        self._ctx.keylog_filename = value
+
+    @property
+    def maximum_version(self) -> ssl.TLSVersion:
+        return self._ctx.maximum_version
+
+    @maximum_version.setter
+    def maximum_version(self, value: ssl.TLSVersion) -> None:
+        self._ctx.maximum_version = value
+
+    @property
+    def minimum_version(self) -> ssl.TLSVersion:
+        return self._ctx.minimum_version
+
+    @minimum_version.setter
+    def minimum_version(self, value: ssl.TLSVersion) -> None:
+        self._ctx.minimum_version = value
+
+    @property
+    def options(self) -> ssl.Options:
+        return self._ctx.options
+
+    @options.setter
+    def options(self, value: ssl.Options) -> None:
+        self._ctx.options = value
+
+    @property
+    def post_handshake_auth(self) -> bool:
+        return self._ctx.post_handshake_auth
+
+    @post_handshake_auth.setter
+    def post_handshake_auth(self, value: bool) -> None:
+        self._ctx.post_handshake_auth = value
+
+    @property
+    def protocol(self) -> ssl._SSLMethod:
+        return self._ctx.protocol
+
+    @property
+    def security_level(self) -> int:
+        return self._ctx.security_level  # type: ignore[attr-defined,no-any-return]
+
+    @property
+    def verify_flags(self) -> ssl.VerifyFlags:
+        return self._ctx.verify_flags
+
+    @verify_flags.setter
+    def verify_flags(self, value: ssl.VerifyFlags) -> None:
+        self._ctx.verify_flags = value
+
+    @property
+    def verify_mode(self) -> ssl.VerifyMode:
+        return self._ctx.verify_mode
+
+    @verify_mode.setter
+    def verify_mode(self, value: ssl.VerifyMode) -> None:
+        self._ctx.verify_mode = value
 
 
 def _verify_peercerts(
