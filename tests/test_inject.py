@@ -7,8 +7,7 @@ import urllib3
 from aiohttp import ClientSession
 
 import truststore
-from tests import SSLContextAdapter
-from tests.conftest import Server
+from tests.conftest import Server, successful_hosts
 
 
 @pytest.fixture(scope="function")
@@ -57,6 +56,14 @@ def test_inject_and_extract():
         truststore.extract_from_ssl()
 
 
+@successful_hosts
+@pytest.mark.usefixtures("inject_truststore")
+def test_success_with_inject(host):
+    with urllib3.PoolManager() as http:
+        resp = http.request("GET", f"https://{host}")
+        assert resp.status == 200
+
+
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("inject_truststore")
 async def test_urllib3_works_with_inject(server: Server) -> None:
@@ -82,7 +89,6 @@ async def test_aiohttp_works_with_inject(server: Server) -> None:
 async def test_requests_works_with_inject(server: Server) -> None:
     def test_requests():
         with requests.Session() as http:
-            http.mount("https://", SSLContextAdapter())
             resp = http.request("GET", server.base_url)
         assert resp.status_code == 200
 

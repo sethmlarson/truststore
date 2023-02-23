@@ -105,7 +105,7 @@ class SSLContext(ssl.SSLContext):
             )
         try:
             _verify_peercerts(ssl_sock, server_hostname=server_hostname)
-        except ssl.SSLError:
+        except Exception:
             ssl_sock.close()
             raise
         return ssl_sock

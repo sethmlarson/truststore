@@ -14,6 +14,9 @@ MKCERT_CA_ALREADY_INSTALLED = b"local CA is now installed in the system trust st
 SUBPROCESS_TIMEOUT = 5
 
 
+successful_hosts = pytest.mark.parametrize("host", ["example.com", "1.1.1.1"])
+
+
 @pytest_asyncio.fixture
 async def mkcert() -> typing.AsyncIterator[None]:
     async def is_mkcert_available() -> bool:
