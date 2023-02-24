@@ -10,16 +10,14 @@ import typing
 
 import _ssl  # type: ignore[import]
 
+from ._ssl_constants import _original_SSLContext, _original_super_SSLContext
+
 if platform.system() == "Windows":
     from ._windows import _configure_context, _verify_peercerts_impl
 elif platform.system() == "Darwin":
     from ._macos import _configure_context, _verify_peercerts_impl
 else:
     from ._openssl import _configure_context, _verify_peercerts_impl
-
-# Hold on to the original class so we can create it consistently
-# even if we inject our own SSLContext into the ssl module.
-_original_SSLContext = ssl.SSLContext
 
 # From typeshed/stdlib/ssl.pyi
 _StrOrBytesPath: typing.TypeAlias = str | bytes | os.PathLike[str] | os.PathLike[bytes]
@@ -234,7 +232,7 @@ class SSLContext(ssl.SSLContext):
 
     @options.setter
     def options(self, value: ssl.Options) -> None:
-        super(_original_SSLContext, _original_SSLContext).options.__set__(  # type: ignore[attr-defined]
+        _original_super_SSLContext.options.__set__(  # type: ignore[attr-defined]
             self._ctx, value
         )
 
@@ -260,7 +258,7 @@ class SSLContext(ssl.SSLContext):
 
     @verify_flags.setter
     def verify_flags(self, value: ssl.VerifyFlags) -> None:
-        super(_original_SSLContext, _original_SSLContext).verify_flags.__set__(  # type: ignore[attr-defined]
+        _original_super_SSLContext.verify_flags.__set__(  # type: ignore[attr-defined]
             self._ctx, value
         )
 
@@ -270,7 +268,7 @@ class SSLContext(ssl.SSLContext):
 
     @verify_mode.setter
     def verify_mode(self, value: ssl.VerifyMode) -> None:
-        super(_original_SSLContext, _original_SSLContext).verify_mode.__set__(  # type: ignore[attr-defined]
+        _original_super_SSLContext.verify_mode.__set__(  # type: ignore[attr-defined]
             self._ctx, value
         )
 

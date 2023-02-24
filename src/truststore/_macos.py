@@ -16,6 +16,8 @@ from ctypes import (
 )
 from ctypes.util import find_library
 
+from ._ssl_constants import _set_ssl_context_verify_mode
+
 _mac_version = platform.mac_ver()[0]
 _mac_version_info = tuple(map(int, _mac_version.split(".")))
 if _mac_version_info < (10, 8):
@@ -346,13 +348,15 @@ def _der_certs_to_cf_cert_array(certs: list[bytes]) -> CFMutableArrayRef:  # typ
 
 @contextlib.contextmanager
 def _configure_context(ctx: ssl.SSLContext) -> typing.Iterator[None]:
-    values = ctx.check_hostname, ctx.verify_mode
+    check_hostname = ctx.check_hostname
+    verify_mode = ctx.verify_mode
     ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    _set_ssl_context_verify_mode(ctx, ssl.CERT_NONE)
     try:
         yield
     finally:
-        ctx.check_hostname, ctx.verify_mode = values
+        ctx.check_hostname = check_hostname
+        _set_ssl_context_verify_mode(ctx, verify_mode)
 
 
 def _verify_peercerts_impl(

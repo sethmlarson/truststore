@@ -64,6 +64,18 @@ def test_success_with_inject(host):
         assert resp.status == 200
 
 
+@pytest.mark.usefixtures("inject_truststore")
+def test_inject_set_values():
+    ctx = ssl.create_default_context()
+    assert isinstance(ctx, truststore.SSLContext)
+
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    assert ctx.check_hostname is False
+    assert ctx.verify_mode == ssl.CERT_NONE
+
+
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("inject_truststore")
 async def test_urllib3_works_with_inject(server: Server) -> None:

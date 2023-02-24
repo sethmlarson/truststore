@@ -29,6 +29,8 @@ from ctypes.wintypes import (
 )
 from typing import TYPE_CHECKING, Any
 
+from ._ssl_constants import _set_ssl_context_verify_mode
+
 HCERTCHAINENGINE = HANDLE
 HCERTSTORE = HANDLE
 HCRYPTPROV_LEGACY = HANDLE
@@ -541,10 +543,12 @@ def _verify_using_custom_ca_certs(
 
 @contextlib.contextmanager
 def _configure_context(ctx: ssl.SSLContext) -> typing.Iterator[None]:
-    values = ctx.check_hostname, ctx.verify_mode
+    check_hostname = ctx.check_hostname
+    verify_mode = ctx.verify_mode
     ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    _set_ssl_context_verify_mode(ctx, ssl.CERT_NONE)
     try:
         yield
     finally:
-        ctx.check_hostname, ctx.verify_mode = values
+        ctx.check_hostname = check_hostname
+        _set_ssl_context_verify_mode(ctx, verify_mode)
