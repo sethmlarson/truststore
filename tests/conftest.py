@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import pathlib
 import ssl
 import typing
@@ -13,8 +14,13 @@ MKCERT_CA_NOT_INSTALLED = b"local CA is not installed in the system trust store"
 MKCERT_CA_ALREADY_INSTALLED = b"local CA is now installed in the system trust store"
 SUBPROCESS_TIMEOUT = 5
 
+# To avoid getting the SSLContext injected by truststore.
+original_SSLContext = ssl.SSLContext
+
 
 successful_hosts = pytest.mark.parametrize("host", ["example.com", "1.1.1.1"])
+
+logger = logging.getLogger("aiohttp.web")
 
 
 @pytest_asyncio.fixture
@@ -122,7 +128,7 @@ class Server:
         return f"https://{self.host}:{self.port}"
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def server(mkcert_certs: CertFiles) -> typing.AsyncIterator[Server]:
     async def handler(request: web.Request) -> web.Response:
         # Check the request was served over HTTPS.
@@ -133,7 +139,7 @@ async def server(mkcert_certs: CertFiles) -> typing.AsyncIterator[Server]:
     app = web.Application()
     app.add_routes([web.get("/", handler)])
 
-    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx = original_SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ctx.load_cert_chain(
         certfile=mkcert_certs.cert_file,
         keyfile=mkcert_certs.key_file,
@@ -145,6 +151,7 @@ async def server(mkcert_certs: CertFiles) -> typing.AsyncIterator[Server]:
     await runner.setup()
     port = 9999  # Arbitrary choice.
     site = web.TCPSite(runner, ssl_context=ctx, port=port)
+
     await site.start()
     try:
         yield Server(host="localhost", port=port)
