@@ -1,3 +1,12 @@
+# 0.6.0
+
+* **Truststore is now beta! Truststore will be made the default in a future pip release**.
+* Added `inject_into_ssl()` and `extract_from_ssl()` to enable Truststore for all
+  packages using `ssl.SSLContext` automatically.
+* Added support for setting `check_hostname`, `verify_mode`, and `verify_flags`.
+* Added pass-through implementations for many `ssl.SSLContext` methods like
+  `load_cert_chain()`, `set_alpn_protocols()`, etc. 
+
 # 0.5.0
 
 * **Support for using truststore was released with pip v22.2**!
