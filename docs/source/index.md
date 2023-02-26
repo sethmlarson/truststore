@@ -21,42 +21,45 @@ Truststore can be installed from [PyPI](https://pypi.org/project/truststore) wit
 $ python -m pip install truststore
 ```
 
-## Platforms
+Truststore **requires Python 3.10 or later** and supports the following platforms:
+- macOS 10.8+ via [Security framework](https://developer.apple.com/documentation/security)
+- Windows via [CryptoAPI](https://docs.microsoft.com/en-us/windows/win32/seccrypto/cryptography-functions#certificate-verification-functions)
+- Linux via OpenSSL
 
-- Requires Python 3.10 or later
-- Supports macOS 10.8+ via [Security framework](https://developer.apple.com/documentation/security)
-- Supports Windows via [CryptoAPI](https://docs.microsoft.com/en-us/windows/win32/seccrypto/cryptography-functions#certificate-verification-functions)
-- Supports Linux via OpenSSL
+## User Guide
 
-## Usage
+You can inject `truststore` into the standard library `ssl` module so the functionality is used
+by every library by default. To do so use the `truststore.inject_into_ssl()` function:
 
-The `truststore` module can be enabled "globally" in the Python `ssl` module
-and automatically used by other code via `truststore.inject_into_ssl()`.
-
-```{code-block} python
-import ssl
-
-# Call this monkey-patching as early as possible in your program
+```python
 import truststore
 truststore.inject_into_ssl()
 
-ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-assert isinstance(ctx, truststore.SSLContext)
-
-# Works automatically with libraries that use ssl.SSLContext
+# Automatically works with urllib3, requests, aiohttp, and more:
+import urllib3
 http = urllib3.PoolManager()
-http.request("GET", "https://example.com")
+resp = http.request("GET", "https://example.com")
+
+import aiohttp
+http = aiohttp.ClientSession()
+resp = await http.request("GET", "https://example.com")
+
+import requests
+resp = requests.get("https://example.com")
 ```
 
-If you want to avoid installing globally you can use the `truststore.SSLContext` class directly.
-The `truststore.SSLContext` class works the same as an {py:class}`ssl.SSLContext`. You can use it
-anywhere you would use an {py:class}`ssl.SSLContext` and system trust stores are automatically
-used to verify peer certificates.
+If you'd like finer-grained control you can create your own `truststore.SSLContext` instance
+and use it anywhere you'd use an `ssl.SSLContext`:
 
-```{code-block} python
+```python
+import ssl
 import truststore
 
 ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+import urllib3
+http = urllib3.PoolManager(ssl_context=ctx)
+resp = http.request("GET", "https://example.com")
 ```
 
 ### Using truststore with pip
@@ -106,7 +109,7 @@ import truststore
 
 truststore.inject_into_ssl()
 
-http = aiohttp.ClientSession(ssl=ctx)
+http = aiohttp.ClientSession()
 resp = await http.request("GET", "https://example.com")
 ```
 

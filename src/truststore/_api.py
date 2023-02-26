@@ -66,7 +66,6 @@ class SSLContext(ssl.SSLContext):
 
     def __init__(self, protocol: int = None) -> None:  # type: ignore[assignment]
         self._ctx = _original_SSLContext(protocol)
-        _configure_context(self._ctx)
 
         class TruststoreSSLObject(ssl.SSLObject):
             # This object exists because wrap_bio() doesn't
