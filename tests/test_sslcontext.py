@@ -13,7 +13,6 @@ def test_minimum_maximum_version():
     ctx.maximum_version = ssl.TLSVersion.TLSv1_2
 
     with urllib3.PoolManager(ssl_context=ctx) as http:
-
         resp = http.request("GET", "https://howsmyssl.com/a/check")
         data = json.loads(resp.data)
         assert data["tls_version"] == "TLS 1.2"

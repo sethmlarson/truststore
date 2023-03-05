@@ -33,7 +33,14 @@ def lint(session):
     session.run("flake8", "--ignore=E501,W503", *SOURCE_PATHS)
     session.run("black", "--check", *SOURCE_PATHS)
     session.run("isort", "--check", "--profile=black", *SOURCE_PATHS)
-    session.run("mypy", "--strict", "--show-error-codes", "src/")
+    session.run(
+        "mypy",
+        "--strict",
+        "--show-error-codes",
+        "--install-types",
+        "--non-interactive",
+        "src/",
+    )
 
 
 @nox.session(python=PYTHONS)
@@ -52,7 +59,7 @@ def test(session):
         "-rs",
         "--no-flaky-report",
         "--max-runs=3",
-        *(session.posargs or ("tests/",))
+        *(session.posargs or ("tests/",)),
     )
 
 
