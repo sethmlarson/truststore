@@ -29,7 +29,10 @@ Truststore **requires Python 3.10 or later** and supports the following platform
 ## User Guide
 
 You can inject `truststore` into the standard library `ssl` module so the functionality is used
-by every library by default. To do so use the `truststore.inject_into_ssl()` function:
+by every library by default. To do so use the `truststore.inject_into_ssl()` function.
+
+The call to `truststore.inject_into_ssl()` should be called as early as possible in
+your program as modules that have already imported `ssl.SSLContext` won't be affected.
 
 ```python
 import truststore
@@ -138,33 +141,6 @@ import truststore
 truststore.inject_into_ssl()
 
 resp = requests.request("GET", "https://example.com")
-```
-
-Requests doesn't support passing an {py:class}`ssl.SSLContext` object to a `requests.Session` object directly so there's an additional class you need to inject the `truststore.SSLContext` instance to the lower-level {py:class}`urllib3.PoolManager` instance:
-
-```{code-block} python
-import ssl
-import requests
-import requests.adapters
-import truststore
-
-class SSLContextAdapter(requests.adapters.HTTPAdapter):
-   def __init__(self, *, ssl_context=None, **kwargs):
-       self._ssl_context = ssl_context
-       super().__init__(**kwargs)
-
-   def init_poolmanager(self, *args, **kwargs):
-       if self._ssl_context is not None:
-           kwargs.setdefault("ssl_context", self._ssl_context)
-       return super().init_poolmanager(*args, **kwargs)
-
-ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-
-http = requests.Session()
-adapter = SSLContextAdapter(ssl_context=ctx)
-http.mount("https://", adapter)
-
-resp = http.request("GET", "https://example.com")
 ```
 
 ## Prior art
