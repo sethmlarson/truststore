@@ -33,8 +33,4 @@ Documentation = "https://truststore.readthedocs.io"
 asyncio_mode = "strict"
 filterwarnings = [
   "error",
-  # 3.11: Pending release of https://github.com/certifi/python-certifi/pull/199
-  "ignore:path is deprecated. Use files",
-  # 3.11: Pending release of https://github.com/aio-libs/aiohttp/pull/6708
-  "ignore:'cgi' is deprecated",
 ]
