@@ -1,7 +1,7 @@
 import datetime
 import truststore
 
-project = "truststore"
+project = "Truststore"
 author = "Seth Michael Larson, David Glick"
 copyright = f"{datetime.date.today().year}"
 release = version = truststore.__version__
