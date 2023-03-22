@@ -248,8 +248,8 @@ class SSLContext(ssl.SSLContext):
         return self._ctx.protocol
 
     @property
-    def security_level(self) -> int:
-        return self._ctx.security_level  # type: ignore[attr-defined,no-any-return]
+    def security_level(self) -> int:  # type: ignore[override]
+        return self._ctx.security_level
 
     @property
     def verify_flags(self) -> ssl.VerifyFlags:
