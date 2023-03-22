@@ -1,7 +1,4 @@
-"""Verify certificates using OS trust stores. This is useful when your system contains
-custom certificate authorities such as when using a corporate proxy or using test certificates.
-Supports macOS, Windows, and Linux (with OpenSSL).
-"""
+"""Verify certificates using native system trust stores"""
 
 import sys as _sys
 
