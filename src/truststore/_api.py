@@ -215,7 +215,9 @@ class SSLContext(ssl.SSLContext):
 
     @maximum_version.setter
     def maximum_version(self, value: ssl.TLSVersion) -> None:
-        self._ctx.maximum_version = value
+        _original_super_SSLContext.maximum_version.__set__(  # type: ignore[attr-defined]
+            self._ctx, value
+        )
 
     @property
     def minimum_version(self) -> ssl.TLSVersion:
@@ -223,7 +225,9 @@ class SSLContext(ssl.SSLContext):
 
     @minimum_version.setter
     def minimum_version(self, value: ssl.TLSVersion) -> None:
-        self._ctx.minimum_version = value
+        _original_super_SSLContext.minimum_version.__set__(  # type: ignore[attr-defined]
+            self._ctx, value
+        )
 
     @property
     def options(self) -> ssl.Options:
