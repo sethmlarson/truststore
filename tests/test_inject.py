@@ -1,6 +1,7 @@
 import asyncio
 import ssl
 
+import httpx
 import pytest
 import requests
 import urllib3
@@ -105,4 +106,16 @@ async def test_requests_works_with_inject(server: Server) -> None:
         assert resp.status_code == 200
 
     thread = asyncio.to_thread(test_requests)
+    await thread
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("inject_truststore")
+async def test_sync_httpx_works_with_inject(server: Server) -> None:
+    def test_httpx():
+        client = httpx.Client()
+        resp = client.request("GET", server.base_url)
+        assert resp.status_code == 200
+
+    thread = asyncio.to_thread(test_httpx)
     await thread
