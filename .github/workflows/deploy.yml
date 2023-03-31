@@ -8,23 +8,23 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: Deploy
+    # Authenticates with PyPI via OIDC
+    permissions:
+      id-token: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: "Checkout repository"
+        uses: "actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b"
 
-      - name: Set Up Python 3.x
-        uses: actions/setup-python@v2
+      - name: "Setup Python"
+        uses: "actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435"
         with:
           python-version: "3.x"
 
-      - name: Build dists
-        shell: bash
+      - name: "Build dists"
         run: |
-          python -m pip install -U build
+          python -m pip install build==0.8.0
+          SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct) \
           python -m build
 
-      - name: Publish dists to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
+      - name: "Publish dists to PyPI"
+        uses: "pypa/gh-action-pypi-publish@48b317d84d5f59668bb13be49d1697e36b3ad009"
