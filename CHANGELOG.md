@@ -1,3 +1,7 @@
+# 0.6.1
+
+* Fixed issue where a `RecursionError` that would be raised when setting `SSLContext.minimum_version` or `.maximum_version`.
+
 # 0.6.0
 
 * **Truststore is now beta! Truststore will be made the default in a future pip release**.
