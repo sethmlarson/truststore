@@ -113,9 +113,17 @@ async def test_requests_works_with_inject(server: Server) -> None:
 @pytest.mark.usefixtures("inject_truststore")
 async def test_sync_httpx_works_with_inject(server: Server) -> None:
     def test_httpx():
-        client = httpx.Client()
-        resp = client.request("GET", server.base_url)
-        assert resp.status_code == 200
+        with httpx.Client() as client:
+            resp = client.request("GET", server.base_url)
+            assert resp.status_code == 200
 
     thread = asyncio.to_thread(test_httpx)
     await thread
+
+
+@pytest.mark.usefixtures("inject_truststore")
+@pytest.mark.asyncio
+async def test_async_httpx_works_with_inject(server: Server) -> None:
+    async with httpx.AsyncClient() as client:
+        resp = await client.request("GET", server.base_url)
+        assert resp.status_code == 200
