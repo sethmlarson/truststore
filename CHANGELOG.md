@@ -1,3 +1,8 @@
+# 0.7.0
+
+* Changed the error raised when using an unsupported macOS version (10.7 or earlier) from an `OSError` to an `ImportError`
+  to match the error raised in other situations where the module isn't supported.
+
 # 0.6.1
 
 * Fixed issue where a `RecursionError` that would be raised when setting `SSLContext.minimum_version` or `.maximum_version`.
