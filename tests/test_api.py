@@ -1,4 +1,5 @@
 import asyncio
+import importlib
 import os
 import platform
 import socket
@@ -6,6 +7,7 @@ import ssl
 import tempfile
 from dataclasses import dataclass
 from operator import attrgetter
+from unittest import mock
 
 import aiohttp
 import aiohttp.client_exceptions
@@ -324,3 +326,19 @@ def test_trustme_cert_still_uses_system_certs(trustme_ca):
         resp = http.request("GET", "https://example.com")
     assert resp.status == 200
     assert len(resp.data) > 0
+
+
+def test_macos_10_7_import_error():
+    with mock.patch("platform.mac_ver") as mac_ver:
+        # This isn't the full structure, but the version is the first element.
+        mac_ver.return_value = ("10.7",)
+
+        with pytest.raises(ImportError) as e:
+            # We want to force a fresh import, so either we get it on the
+            # first try because the OS isn't macOS or we get it on
+            # the call to importlib.reload(...).
+            import truststore._macos
+
+            importlib.reload(truststore._macos)
+
+        assert str(e.value) == "Only OS X 10.8 and newer are supported, not 10.7"
