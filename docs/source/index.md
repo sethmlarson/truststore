@@ -76,6 +76,17 @@ http = urllib3.PoolManager(ssl_context=ctx)
 resp = http.request("GET", "https://example.com")
 ```
 
+If Truststore can't work for a given platform due to APIs not being available then
+at import time the exception `ImportError` will be raised with an informative message:
+
+```python
+# On Python 3.9 and earlier:
+import truststore  # Raises 'ImportError'
+
+# On macOS 10.7 and earlier:
+import truststore  # Raises 'ImportError'
+```
+
 ### Using truststore with pip
 
 [Pip v22.2](https://discuss.python.org/t/announcement-pip-22-2-release/17543) includes experimental support for verifying certificates with system trust stores using `truststore`. To enable the feature, use the flag `--use-feature=truststore` when installing a package like so:
