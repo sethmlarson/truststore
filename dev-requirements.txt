@@ -8,5 +8,4 @@ trustme
 requests
 flaky
 httpx
-memray
-pytest-memray
+pytest-memray; python_version<"3.12" and sys_platform!="win32" and implementation_name=="cpython"

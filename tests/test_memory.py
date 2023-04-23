@@ -8,7 +8,15 @@ import truststore
 
 from .conftest import Server
 
+try:
+    import pytest_memray  # noqa: F401
 
+    memray_installed = True
+except ImportError:
+    memray_installed = False
+
+
+@pytest.mark.skipif(not memray_installed, reason="Memray isn't installed")
 @pytest.mark.limit_memory("1MB")
 @pytest.mark.asyncio
 async def test_memory_limit(server: Server) -> None:
