@@ -34,3 +34,6 @@ asyncio_mode = "strict"
 filterwarnings = [
   "error",
 ]
+markers = [
+  "limit_memory"
+]
