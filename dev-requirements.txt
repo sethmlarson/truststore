@@ -8,3 +8,5 @@ trustme
 requests
 flaky
 httpx
+memray
+pytest-memray

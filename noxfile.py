@@ -57,6 +57,7 @@ def test(session):
         "-v",
         "-s",
         "-rs",
+        "--memray",
         "--no-flaky-report",
         "--max-runs=3",
         *(session.posargs or ("tests/",)),
