@@ -53,13 +53,16 @@ def test(session):
     session.install("-rdev-requirements.txt", ".")
     session.run("pip", "freeze")
     memray_supported = not session.run("python", "-c", '"import pytest_memray"')
+    memray_posargs: tuple[str, ...] = (
+        ("--memray", "--hide-memray-summary") if memray_supported else ()
+    )
 
     session.run(
         "pytest",
         "-v",
         "-s",
         "-rs",
-        *("--memray", "--hide-memray-summary") if memray_supported else (),
+        *memray_posargs,
         "--no-flaky-report",
         "--max-runs=3",
         *(session.posargs or ("tests/",)),
