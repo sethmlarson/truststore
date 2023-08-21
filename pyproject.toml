@@ -33,5 +33,6 @@ Documentation = "https://truststore.readthedocs.io"
 asyncio_mode = "strict"
 filterwarnings = [
   "error",
+  # See: aio-libs/aiohttp#7545
   "ignore:.*datetime.utcfromtimestamp().*:DeprecationWarning",
 ]
