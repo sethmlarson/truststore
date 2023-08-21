@@ -79,6 +79,19 @@ jobs:
           python -m pip install nox
           nox -s test
 
+  compileall:
+    # Run 'python -m compileall' on an old Python version
+    # to ensure that pip can vendor truststore successfully.
+    runs-on: ubuntu-latest
+    name: compileall
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+        with:
+          python-version: "3.7"
+      - run: |
+          python -m compileall -qq -f src/truststore/
+
   integration-pip:
     runs-on: ubuntu-latest
     name: Integration pip
@@ -112,3 +125,9 @@ jobs:
           nox -s test-3.11 -- \
             -m integration \
             tests/functional/test_truststore.py
+
+      - name: Run pip debug
+        working-directory: "${{ github.workspace }}/pip"
+        run: |
+          python -m pip install -e .
+          python -m pip debug
