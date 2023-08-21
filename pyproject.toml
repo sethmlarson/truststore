@@ -33,4 +33,5 @@ Documentation = "https://truststore.readthedocs.io"
 asyncio_mode = "strict"
 filterwarnings = [
   "error",
+  "ignore:.*datetime.utcfromtimestamp().*:DeprecationWarning",
 ]
