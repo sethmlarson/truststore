@@ -1,8 +1,4 @@
-import array
-import ctypes
-import mmap
 import os
-import pickle
 import platform
 import socket
 import ssl
@@ -19,20 +15,12 @@ elif platform.system() == "Darwin":
 else:
     from ._openssl import _configure_context, _verify_peercerts_impl
 
+if typing.TYPE_CHECKING:
+    from typing_extensions import Buffer
+
 # From typeshed/stdlib/ssl.pyi
 _StrOrBytesPath: typing.TypeAlias = str | bytes | os.PathLike[str] | os.PathLike[bytes]
 _PasswordType: typing.TypeAlias = str | bytes | typing.Callable[[], str | bytes]
-
-# From typeshed/stdlib/_typeshed/__init__.py
-_ReadableBuffer: typing.TypeAlias = typing.Union[
-    bytes,
-    memoryview,
-    bytearray,
-    "array.array[typing.Any]",
-    mmap.mmap,
-    "ctypes._CData",
-    pickle.PickleBuffer,
-]
 
 
 def inject_into_ssl() -> None:
@@ -129,7 +117,7 @@ class SSLContext(ssl.SSLContext):
         self,
         cafile: str | bytes | os.PathLike[str] | os.PathLike[bytes] | None = None,
         capath: str | bytes | os.PathLike[str] | os.PathLike[bytes] | None = None,
-        cadata: str | _ReadableBuffer | None = None,
+        cadata: typing.Union[str, "Buffer", None] = None,
     ) -> None:
         return self._ctx.load_verify_locations(
             cafile=cafile, capath=capath, cadata=cadata
