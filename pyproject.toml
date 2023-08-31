@@ -36,3 +36,6 @@ filterwarnings = [
   # See: aio-libs/aiohttp#7545
   "ignore:.*datetime.utcfromtimestamp().*:DeprecationWarning",
 ]
+
+[tool.flit.sdist]
+include = ["docs", "tests"]
