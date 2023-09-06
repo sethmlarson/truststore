@@ -6,7 +6,12 @@ import typing
 
 import _ssl  # type: ignore[import]
 
-from ._ssl_constants import _original_SSLContext, _original_super_SSLContext
+from ._ssl_constants import (
+    _original_SSLContext,
+    _original_super_SSLContext,
+    _truststore_SSLContext_dunder_class,
+    _truststore_SSLContext_super_class,
+)
 
 if platform.system() == "Windows":
     from ._windows import _configure_context, _verify_peercerts_impl
@@ -49,8 +54,15 @@ def extract_from_ssl() -> None:
         pass
 
 
-class SSLContext(ssl.SSLContext):
+class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
     """SSLContext API that uses system certificates on all platforms"""
+
+    @property  # type: ignore[misc]
+    def __class__(self) -> type:
+        # Dirty hack to get around isinstance() checks
+        # for ssl.SSLContext instances in aiohttp/trustme
+        # when using non-CPython implementations.
+        return _truststore_SSLContext_dunder_class or SSLContext
 
     def __init__(self, protocol: int = None) -> None:  # type: ignore[assignment]
         self._ctx = _original_SSLContext(protocol)
@@ -240,7 +252,7 @@ class SSLContext(ssl.SSLContext):
         return self._ctx.protocol
 
     @property
-    def security_level(self) -> int:  # type: ignore[override]
+    def security_level(self) -> int:
         return self._ctx.security_level
 
     @property
