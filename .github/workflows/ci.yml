@@ -38,7 +38,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
-        python-version: ["3.10", "3.11", "3.12-dev"]
+        python-version: ["3.10", "3.11", "3.12", "pypy3.10"]
 
     runs-on: ${{ matrix.os }}
     name: ${{ fromJson('{"macos-latest":"macOS","windows-latest":"Windows","ubuntu-latest":"Ubuntu"}')[matrix.os] }} Python ${{ matrix.python-version }}
@@ -49,9 +49,10 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
 
       - name: Setup Go
         uses: actions/setup-go@v3

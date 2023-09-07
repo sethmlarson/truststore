@@ -140,9 +140,13 @@ async def server(mkcert_certs: CertFiles) -> typing.AsyncIterator[Server]:
     app.add_routes([web.get("/", handler)])
 
     ctx = original_SSLContext(ssl.PROTOCOL_TLS_SERVER)
+
+    # We use str(pathlib.Path) here because PyPy doesn't accept Path objects.
+    # TODO: This is a bug in PyPy and should be reported to them, but their
+    # GitLab instance was offline when we found this bug. :'(
     ctx.load_cert_chain(
-        certfile=mkcert_certs.cert_file,
-        keyfile=mkcert_certs.key_file,
+        certfile=str(mkcert_certs.cert_file),
+        keyfile=str(mkcert_certs.key_file),
     )
 
     # we need keepalive_timeout=0
