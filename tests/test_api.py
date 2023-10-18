@@ -20,6 +20,7 @@ from OpenSSL.crypto import X509
 
 import truststore
 from tests import SSLContextAdapter
+from tests.conftest import decorator_requires_internet
 
 pytestmark = pytest.mark.flaky
 
@@ -27,7 +28,10 @@ pytestmark = pytest.mark.flaky
 # if the client drops the connection due to a cert verification error
 socket.setdefaulttimeout(10)
 
-successful_hosts = pytest.mark.parametrize("host", ["example.com", "1.1.1.1"])
+
+successful_hosts = decorator_requires_internet(
+    pytest.mark.parametrize("host", ["example.com", "1.1.1.1"])
+)
 
 
 @dataclass
@@ -118,8 +122,10 @@ failure_hosts_list = [
     ),
 ]
 
-failure_hosts_no_revocation = pytest.mark.parametrize(
-    "failure", failure_hosts_list.copy(), ids=attrgetter("host")
+failure_hosts_no_revocation = decorator_requires_internet(
+    pytest.mark.parametrize(
+        "failure", failure_hosts_list.copy(), ids=attrgetter("host")
+    )
 )
 
 if platform.system() != "Linux":
@@ -139,8 +145,8 @@ if platform.system() != "Linux":
         )
     )
 
-failure_hosts = pytest.mark.parametrize(
-    "failure", failure_hosts_list, ids=attrgetter("host")
+failure_hosts = decorator_requires_internet(
+    pytest.mark.parametrize("failure", failure_hosts_list, ids=attrgetter("host"))
 )
 
 
@@ -318,6 +324,7 @@ def test_trustme_cert_loaded_via_capath(trustme_ca, httpserver):
         assert len(resp.data) > 0
 
 
+@pytest.mark.internet
 def test_trustme_cert_still_uses_system_certs(trustme_ca):
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     trustme_ca.configure_trust(ctx)

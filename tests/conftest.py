@@ -18,7 +18,18 @@ SUBPROCESS_TIMEOUT = 5
 original_SSLContext = ssl.SSLContext
 
 
-successful_hosts = pytest.mark.parametrize("host", ["example.com", "1.1.1.1"])
+def decorator_requires_internet(decorator):
+    """Mark a decorator with the "internet" mark"""
+
+    def wrapper(f):
+        return pytest.mark.internet(decorator(f))
+
+    return wrapper
+
+
+successful_hosts = decorator_requires_internet(
+    pytest.mark.parametrize("host", ["example.com", "1.1.1.1"])
+)
 
 logger = logging.getLogger("aiohttp.web")
 

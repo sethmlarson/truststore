@@ -38,6 +38,9 @@ filterwarnings = [
   # See: aio-libs/aiohttp#7545
   "ignore:.*datetime.utcfromtimestamp().*:DeprecationWarning",
 ]
+markers = [
+  "internet: test requires Internet access"
+]
 
 [tool.flit.sdist]
 include = ["docs", "tests"]
