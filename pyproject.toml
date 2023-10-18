@@ -39,7 +39,7 @@ filterwarnings = [
   "ignore:.*datetime.utcfromtimestamp().*:DeprecationWarning",
 ]
 markers = [
-  "internet: test reqires Internet access"
+  "internet: test requires Internet access"
 ]
 
 [tool.flit.sdist]
