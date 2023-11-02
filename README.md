@@ -37,6 +37,12 @@ Truststore **requires Python 3.10 or later** and supports the following platform
 
 ## User Guide
 
+> **Warning**
+> **PLEASE READ:** `inject_into_ssl()` **must not be used by libraries or packages** as it will cause issues on import time when integrated with other libraries.
+> Libraries and packages should instead use `truststore.SSLContext` directly which is detailed below.
+> 
+> The `inject_into_ssl()` function is intended only for use in applications and scripts.
+
 You can inject `truststore` into the standard library `ssl` module so the functionality is used
 by every library by default. To do so use the `truststore.inject_into_ssl()` function:
 
@@ -57,7 +63,7 @@ import requests
 resp = requests.get("https://example.com")
 ```
 
-If you'd like finer-grained control you can create your own `truststore.SSLContext` instance
+If you'd like finer-grained control or you're developing a library or package you can create your own `truststore.SSLContext` instance
 and use it anywhere you'd use an `ssl.SSLContext`:
 
 ```python
