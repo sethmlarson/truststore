@@ -1,3 +1,7 @@
+# 0.8.0
+
+* Added support for PyPy 3.10 and later.
+
 # 0.7.0
 
 * Changed the error raised when using an unsupported macOS version (10.7 or earlier) from an `OSError` to an `ImportError`

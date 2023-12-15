@@ -21,7 +21,7 @@ def format(session):
     session.run("black", *SOURCE_PATHS)
     session.run("isort", "--profile=black", *SOURCE_PATHS)
     session.run(
-        "pyupgrade", "--py310-plus", "--exit-zero-even-if-changed", *SOURCE_FILES
+        "pyupgrade", "--py37-plus", "--exit-zero-even-if-changed", *SOURCE_FILES
     )
 
     lint(session)

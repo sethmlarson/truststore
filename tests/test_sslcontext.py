@@ -8,6 +8,7 @@ from urllib3.exceptions import InsecureRequestWarning, SSLError
 import truststore
 
 
+@pytest.mark.internet
 def test_minimum_maximum_version():
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.maximum_version = ssl.TLSVersion.TLSv1_2
@@ -24,6 +25,7 @@ def test_minimum_maximum_version():
     assert ctx.maximum_version == ssl.TLSVersion.TLSv1_2
 
 
+@pytest.mark.internet
 def test_check_hostname_false():
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     assert ctx.check_hostname is True
@@ -35,6 +37,7 @@ def test_check_hostname_false():
         assert "match" in str(e.value)
 
 
+@pytest.mark.internet
 def test_verify_mode_cert_none():
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     assert ctx.check_hostname is True
