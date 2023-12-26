@@ -39,6 +39,7 @@ filterwarnings = [
   "ignore:.*datetime.utcfromtimestamp().*:DeprecationWarning",
 ]
 markers = [
+  "limit_memory: test limits memory",
   "internet: test requires Internet access"
 ]
 

@@ -396,9 +396,9 @@ def _verify_peercerts_impl(
             else:
                 raise
     finally:
-        CertCloseStore(hIntermediateCertStore, 0)
+        # CertCloseStore(hIntermediateCertStore, 0)
         if pCertContext:
-            CertFreeCertificateContext(pCertContext)
+            pass  # CertFreeCertificateContext(pCertContext)
 
 
 def _get_and_verify_cert_chain(
