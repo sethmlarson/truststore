@@ -29,7 +29,9 @@ def format(session):
 
 @nox.session
 def lint(session):
-    session.install("black", "isort", "flake8", "mypy", "types-certifi", "tomli")
+    session.install(
+        "black", "isort", "flake8", "mypy", "types-certifi", "tomli", "urllib3"
+    )
     session.run("flake8", "--ignore=E501,W503", *SOURCE_PATHS)
     session.run("black", "--check", *SOURCE_PATHS)
     session.run("isort", "--check", "--profile=black", *SOURCE_PATHS)
