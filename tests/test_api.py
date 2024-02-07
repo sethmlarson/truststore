@@ -209,6 +209,34 @@ def test_failures(failure):
     assert any(message in error_repr for message in failure.error_messages), error_repr
 
 
+@successful_hosts
+def test_success_after_loading_additional_anchors(host, trustme_ca):
+    with socket.create_connection((host, 443)) as sock:
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+        # See if loading additional anchors still uses system anchors.
+        trustme_ca.configure_trust(ctx)
+        with ctx.wrap_socket(sock, server_hostname=host):
+            pass
+
+
+@failure_hosts
+def test_failure_after_loading_additional_anchors(failure, trustme_ca):
+    with (
+        pytest.raises(ssl.SSLCertVerificationError) as e,
+        socket.create_connection((failure.host, 443)) as sock,
+    ):
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+        # See if loading additional anchors still fails.
+        trustme_ca.configure_trust(ctx)
+        with ctx.wrap_socket(sock, server_hostname=failure.host):
+            pass
+
+    error_repr = repr(e.value)
+    assert any(message in error_repr for message in failure.error_messages), error_repr
+
+
 @failure_hosts_no_revocation
 def test_failures_without_revocation_checks(failure):
     # On macOS with revocation checks required, we get a
