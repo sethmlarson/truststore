@@ -17,6 +17,7 @@ import trustme
 import urllib3
 import urllib3.exceptions
 from OpenSSL.crypto import X509
+from pytest_httpserver import HTTPServer
 
 import truststore
 from tests import SSLContextAdapter
@@ -150,18 +151,35 @@ failure_hosts = decorator_requires_internet(
 )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def trustme_ca():
     ca = trustme.CA()
     yield ca
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def httpserver_ssl_context(trustme_ca):
     server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     server_cert = trustme_ca.issue_cert("localhost")
     server_cert.configure_cert(server_context)
     return server_context
+
+
+# Changes pytest-httpserver fixture to be scope='function' instead of 'session'.
+@pytest.fixture(scope="function")
+def make_httpserver(httpserver_listen_address, httpserver_ssl_context):
+    host, port = httpserver_listen_address
+    if not host:
+        host = HTTPServer.DEFAULT_LISTEN_HOST
+    if not port:
+        port = HTTPServer.DEFAULT_LISTEN_PORT
+
+    server = HTTPServer(host=host, port=port, ssl_context=httpserver_ssl_context)
+    server.start()
+    yield server
+    server.clear()
+    if server.is_running():
+        server.stop()
 
 
 def connect_to_host(
@@ -186,6 +204,34 @@ def test_success(host):
 def test_failures(failure):
     with pytest.raises(ssl.SSLCertVerificationError) as e:
         connect_to_host(failure.host)
+
+    error_repr = repr(e.value)
+    assert any(message in error_repr for message in failure.error_messages), error_repr
+
+
+@successful_hosts
+def test_success_after_loading_additional_anchors(host, trustme_ca):
+    with socket.create_connection((host, 443)) as sock:
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+        # See if loading additional anchors still uses system anchors.
+        trustme_ca.configure_trust(ctx)
+        with ctx.wrap_socket(sock, server_hostname=host):
+            pass
+
+
+@failure_hosts
+def test_failure_after_loading_additional_anchors(failure, trustme_ca):
+    with (
+        pytest.raises(ssl.SSLCertVerificationError) as e,
+        socket.create_connection((failure.host, 443)) as sock,
+    ):
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+        # See if loading additional anchors still fails.
+        trustme_ca.configure_trust(ctx)
+        with ctx.wrap_socket(sock, server_hostname=failure.host):
+            pass
 
     error_repr = repr(e.value)
     assert any(message in error_repr for message in failure.error_messages), error_repr
