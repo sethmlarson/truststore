@@ -287,13 +287,16 @@ def _verify_peercerts(
     except AttributeError:
         pass
 
-    # SSLObject.get_unverified_chain() returns 'None'
-    # if the peer sends no certificates. This is common
-    # for the server-side scenario.
-    unverified_chain: typing.Sequence[_ssl.Certificate] = (
+    # Python 3.13+ makes get_unverified_chain() a public API that only returns DER
+    # encoded certificates. We detect whether we need to call public_bytes() for 3.10->3.12
+    # Pre-3.13 returned None instead of an empty list from get_unverified_chain()
+    unverified_chain: typing.Sequence[_ssl.Certificate | bytes] = (
         sslobj.get_unverified_chain() or ()  # type: ignore[attr-defined]
     )
-    cert_bytes = [cert.public_bytes(_ssl.ENCODING_DER) for cert in unverified_chain]
+    cert_bytes = [
+        cert if isinstance(cert, bytes) else cert.public_bytes(_ssl.ENCODING_DER)
+        for cert in unverified_chain
+    ]
     _verify_peercerts_impl(
         sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
     )
