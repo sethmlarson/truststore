@@ -4,7 +4,9 @@ pytest
 pytest-asyncio
 pytest-httpserver
 urllib3
-trustme
 requests
 flaky
 httpx
+
+# Requires 'cryptography' which doesn't yet support Python 3.13
+trustme; python_version < "3.13"

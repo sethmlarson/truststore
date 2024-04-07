@@ -13,10 +13,8 @@ import aiohttp
 import aiohttp.client_exceptions
 import pytest
 import requests
-import trustme
 import urllib3
 import urllib3.exceptions
-from OpenSSL.crypto import X509
 
 import truststore
 from tests import SSLContextAdapter
@@ -152,6 +150,12 @@ failure_hosts = decorator_requires_internet(
 
 @pytest.fixture(scope="session")
 def trustme_ca():
+    # 'trustme' is optional to allow testing on Python 3.13
+    try:
+        import trustme
+    except ImportError:
+        pytest.skip("Test requires 'trustme' to be installed")
+
     ca = trustme.CA()
     yield ca
 
@@ -306,6 +310,8 @@ def test_trustme_cert(trustme_ca, httpserver):
 
 
 def test_trustme_cert_loaded_via_capath(trustme_ca, httpserver):
+    from OpenSSL.crypto import X509
+
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     with tempfile.TemporaryDirectory() as capath:
         with open(f"{capath}/cert.pem", "wb") as certfile:
