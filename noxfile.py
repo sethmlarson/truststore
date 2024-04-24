@@ -12,7 +12,7 @@ SOURCE_FILES = (
 # Run in the current Python environment on CI
 # (where there's a matrix of jobs using different Pythons)
 # but test multiple versions locally
-PYTHONS = None if os.environ.get("CI") else ["3.10", "3.11", "3.12"]
+PYTHONS = None if os.environ.get("CI") else ["3.10", "3.11", "3.12", "3.13"]
 
 
 @nox.session
@@ -32,7 +32,7 @@ def lint(session):
     session.install(
         "black", "isort", "flake8", "mypy", "types-certifi", "tomli", "urllib3"
     )
-    session.run("flake8", "--ignore=E501,W503", *SOURCE_PATHS)
+    session.run("flake8", "--ignore=E501,W503,E704", *SOURCE_PATHS)
     session.run("black", "--check", *SOURCE_PATHS)
     session.run("isort", "--check", "--profile=black", *SOURCE_PATHS)
     session.run(
