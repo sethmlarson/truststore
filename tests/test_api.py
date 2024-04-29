@@ -15,6 +15,7 @@ import pytest
 import requests
 import urllib3
 import urllib3.exceptions
+from pytest_httpserver import HTTPServer
 
 import truststore
 from tests import SSLContextAdapter
@@ -148,7 +149,7 @@ failure_hosts = decorator_requires_internet(
 )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def trustme_ca():
     # 'trustme' is optional to allow testing on Python 3.13
     try:
@@ -160,12 +161,29 @@ def trustme_ca():
     yield ca
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def httpserver_ssl_context(trustme_ca):
     server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     server_cert = trustme_ca.issue_cert("localhost")
     server_cert.configure_cert(server_context)
     return server_context
+
+
+# Changes pytest-httpserver fixture to be scope='function' instead of 'session'.
+@pytest.fixture(scope="function")
+def make_httpserver(httpserver_listen_address, httpserver_ssl_context):
+    host, port = httpserver_listen_address
+    if not host:
+        host = HTTPServer.DEFAULT_LISTEN_HOST
+    if not port:
+        port = HTTPServer.DEFAULT_LISTEN_PORT
+
+    server = HTTPServer(host=host, port=port, ssl_context=httpserver_ssl_context)
+    server.start()
+    yield server
+    server.clear()
+    if server.is_running():
+        server.stop()
 
 
 def connect_to_host(
