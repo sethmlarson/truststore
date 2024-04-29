@@ -1,7 +1,7 @@
 # 0.9.0
 
 * Added support for Python 3.13.
-* Fixed loading additional certificates on macOS Secure Transport.
+* Fixed loading additional certificates on macOS.
 * Changed error message for Windows when peer offers no certificates
   and verification is enabled. Previously was `IndexError`, now is `SSLCertVerificationError`.
 
