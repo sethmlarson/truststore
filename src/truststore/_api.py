@@ -5,6 +5,8 @@ import ssl
 import sys
 import typing
 
+import _ssl  # type: ignore[import-not-found]
+
 from ._ssl_constants import (
     _original_SSLContext,
     _original_super_SSLContext,
@@ -279,10 +281,12 @@ if sys.version_info >= (3, 13):
 
     def _get_unverified_chain_bytes(sslobj: ssl.SSLObject) -> list[bytes]:
         unverified_chain = sslobj.get_unverified_chain() or ()  # type: ignore[attr-defined]
-        return [cert for cert in unverified_chain]
+        return [
+            cert if isinstance(cert, bytes) else cert.public_bytes(_ssl.ENCODING_DER)
+            for cert in unverified_chain
+        ]
 
 else:
-    import _ssl  # type: ignore[import-not-found]
 
     def _get_unverified_chain_bytes(sslobj: ssl.SSLObject) -> list[bytes]:
         unverified_chain = sslobj.get_unverified_chain() or ()  # type: ignore[attr-defined]
