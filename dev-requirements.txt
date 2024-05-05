@@ -7,6 +7,7 @@ urllib3
 requests
 flaky
 httpx
+trustme
 
-# Requires 'cryptography' which doesn't yet support Python 3.13
-trustme; python_version < "3.13"
+# Temporary stop-gap until cffi supports 3.13
+cffi @ https://github.com/python-cffi/cffi/archive/refs/heads/main.zip; python_version > "3.12"
