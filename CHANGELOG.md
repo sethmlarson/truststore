@@ -1,3 +1,8 @@
+# 0.9.1
+
+* Fixed an issue for CPython 3.13 where `ssl.SSLSocket` and `ssl.SSLObject` certificate
+  chain APIs would return different types.
+
 # 0.9.0
 
 * Added support for Python 3.13.
