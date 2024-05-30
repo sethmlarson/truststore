@@ -140,8 +140,9 @@ import truststore
 
 truststore.inject_into_ssl()
 
-http = aiohttp.ClientSession()
-resp = await http.request("GET", "https://example.com")
+async with aiohttp.ClientSession() as http_client:
+    async with http_client.get("https://example.com") as http_response:
+        ...
 ```
 
 If you'd like to use the `truststore.SSLContext` directly you can pass
@@ -154,8 +155,9 @@ import truststore
 
 ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
-http = aiohttp.ClientSession(ssl=ctx)
-resp = await http.request("GET", "https://example.com")
+async with aiohttp.ClientSession(ssl=ctx) as http_client:
+    async with http_client.get("https://example.com") as http_response:
+        ...
 ```
 
 ### Using truststore with Requests
