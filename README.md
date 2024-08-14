@@ -16,11 +16,10 @@ have many helpful features compared to a static certificate bundle like certifi:
 
 Right now truststore is a stand-alone library that can be installed globally in your
 application to immediately take advantage of the benefits in Python 3.10+. Truststore
-has also been integrated into pip as an opt-in method for verifying HTTPS certificates
-with truststore instead of certifi.
+has also been integrated into pip 24.2+ as the default method for verifying HTTPS
+certificates (with a fallback to certifi).
 
-Long-term the hope is to make truststore the default way to verify HTTPS certificates in pip
-and to add this functionality into Python itself. Wish us luck!
+Long-term the hope is to add this functionality into Python itself. Wish us luck!
 
 ## Installation
 
