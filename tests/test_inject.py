@@ -3,7 +3,6 @@ import ssl
 
 import httpx
 import pytest
-import requests
 import urllib3
 from aiohttp import ClientSession
 
@@ -101,6 +100,8 @@ async def test_aiohttp_works_with_inject(server: Server) -> None:
 @pytest.mark.usefixtures("inject_truststore")
 async def test_requests_works_with_inject(server: Server) -> None:
     def test_requests():
+        import requests  # noqa: F401
+
         with requests.Session() as http:
             resp = http.request("GET", server.base_url)
         assert resp.status_code == 200
