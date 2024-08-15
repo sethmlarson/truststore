@@ -1,5 +1,8 @@
 import asyncio
+import pathlib
 import ssl
+import subprocess
+import sys
 
 import httpx
 import pytest
@@ -96,18 +99,12 @@ async def test_aiohttp_works_with_inject(server: Server) -> None:
         assert resp.status == 200
 
 
-@pytest.mark.asyncio
-@pytest.mark.usefixtures("inject_truststore")
-async def test_requests_works_with_inject(server: Server) -> None:
-    def test_requests():
-        import requests  # noqa: F401
-
-        with requests.Session() as http:
-            resp = http.request("GET", server.base_url)
-        assert resp.status_code == 200
-
-    thread = asyncio.to_thread(test_requests)
-    await thread
+def test_requests_works_with_inject() -> None:
+    # We completely isolate the requests module because
+    # pytest or some other part of our test infra is messing
+    # with the order it's loaded into modules.
+    script = pathlib.Path(__file__).parent / "requests_with_inject.py"
+    subprocess.check_output([sys.executable, script])
 
 
 @pytest.mark.asyncio
