@@ -26,9 +26,11 @@ if _sys.version_info < (3, 13):
                 "truststore requires peer certificate chain APIs to be available"
             ) from None
 
+        del _ssl, _sslobj, _sslmem  # type: ignore[name-defined] # noqa: F821
+
 from ._api import SSLContext, extract_from_ssl, inject_into_ssl  # noqa: E402
 
-del _api, _sys, _ssl, _sslobj, _sslmem  # type: ignore[name-defined] # noqa: F821
+del _api, _sys  # type: ignore[name-defined] # noqa: F821
 
 __all__ = ["SSLContext", "inject_into_ssl", "extract_from_ssl"]
 __version__ = "0.9.2"
