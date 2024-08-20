@@ -26,7 +26,7 @@ if _sys.version_info < (3, 13):
                 "truststore requires peer certificate chain APIs to be available"
             ) from None
 
-        del _ssl, _sslobj, _sslmem  # type: ignore[name-defined] # noqa: F821
+        del _ssl, _sslobj, _sslmem  # noqa: F821
 
 from ._api import SSLContext, extract_from_ssl, inject_into_ssl  # noqa: E402
 
