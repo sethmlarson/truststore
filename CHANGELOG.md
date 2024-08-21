@@ -1,3 +1,10 @@
+# 0.9.2
+
+* Fixed an issue where implementations supporting Python 3.10 but not the peer certificate chain APIs
+  would fail during the handshake instead of when importing the `truststore` module. The module
+  now raises an error immediately instead of on first handshake. This was added for the GraalPy
+  implementation specifically, but there may be others.
+
 # 0.9.1
 
 * Fixed an issue for CPython 3.13 where `ssl.SSLSocket` and `ssl.SSLObject` certificate
