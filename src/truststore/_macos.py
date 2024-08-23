@@ -367,7 +367,9 @@ def _verify_peercerts_impl(
     trust = None
     cf_error = None
     try:
-        if server_hostname is not None:
+        # Only set a hostname on the policy if we're verifying the hostname
+        # on the leaf certificate.
+        if server_hostname is not None and ssl_context.check_hostname:
             cf_str_hostname = None
             try:
                 cf_str_hostname = _bytes_to_cf_string(server_hostname.encode("ascii"))
@@ -456,11 +458,6 @@ def _verify_peercerts_impl(
             if ssl_context.verify_mode != ssl.CERT_REQUIRED and (
                 cf_error_code == CFConst.errSecNotTrusted
                 or cf_error_code == CFConst.errSecCertificateExpired
-            ):
-                is_trusted = True
-            elif (
-                not ssl_context.check_hostname
-                and cf_error_code == CFConst.errSecHostNameMismatch
             ):
                 is_trusted = True
 
