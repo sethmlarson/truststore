@@ -99,6 +99,7 @@ async def test_aiohttp_works_with_inject(server: Server) -> None:
         assert resp.status == 200
 
 
+@pytest.mark.internet
 def test_requests_works_with_inject() -> None:
     # We completely isolate the requests module because
     # pytest or some other part of our test infra is messing
