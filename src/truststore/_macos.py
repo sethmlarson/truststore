@@ -431,7 +431,41 @@ def _verify_peercerts_impl(
         # We always want system certificates.
         Security.SecTrustSetAnchorCertificatesOnly(trust, False)
 
+        # if _mac_version_info <= (10, 13):
+        if 1 or _mac_version_info <= (10, 13):
+            sec_trust_result = Security.SecTrustResultType()
+            Security.SecTrustEvaluate(trust, ctypes.byref(sec_trust_result))
+
+            try:
+                sec_trust_result = int(sec_trust_result)
+            except (TypeError, ValueError):
+                sec_trust_result = -1
+
+            # See https://developer.apple.com/documentation/security/sectrustevaluate(_:_:)?language=objc
+            if sec_trust_result not in [1, 4]:
+                result_mapping = {
+                    0: "Invalid trust result.",
+                    1: "Trust evaluation succeeded.",
+                    2: "Trust was explicitly denied.",
+                    3: "Fatal trust failure occurred.",
+                    4: "Trust result is unspecified (but trusted).",
+                    5: "Recoverable trust failure occurred.",
+                    6: "An unknown error occurred.",
+                    7: "User confirmation required.",
+                }
+
+                error_message = result_mapping.get(
+                    sec_trust_result, "Unknown trust result."
+                )
+                err = ssl.SSLCertVerificationError(error_message)
+                err.verify_message = error_message
+                err.verify_code = sec_trust_result
+                raise err
+
+            return
+
         cf_error = CoreFoundation.CFErrorRef()
+        # See https://developer.apple.com/documentation/security/sectrustevaluatewitherror(_:_:)?language=objc
         sec_trust_eval_result = Security.SecTrustEvaluateWithError(
             trust, ctypes.byref(cf_error)
         )
