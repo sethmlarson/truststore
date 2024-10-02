@@ -49,6 +49,8 @@ failure_hosts_list = [
             "certificate name does not match",
             # macOS with revocation checks
             "certificates do not meet pinning requirements",
+            # macOS 10.12
+            "Recoverable trust failure occurred",
             # Windows
             "The certificate's CN name does not match the passed value.",
         ],
@@ -62,6 +64,8 @@ failure_hosts_list = [
             "“*.badssl.com” certificate is expired",
             # macOS with revocation checks
             "certificates do not meet pinning requirements",
+            # macOS 10.12
+            "Recoverable trust failure occurred",
             # Windows
             (
                 "A required certificate is not within its validity period when verifying "
@@ -79,6 +83,8 @@ failure_hosts_list = [
             "“*.badssl.com” certificate is not trusted",
             # macOS with revocation checks
             "certificates do not meet pinning requirements",
+            # macOS 10.12
+            "Recoverable trust failure occurred",
             # Windows
             (
                 "A certificate chain processed, but terminated in a root "
@@ -96,6 +102,8 @@ failure_hosts_list = [
             "“BadSSL Untrusted Root Certificate Authority” certificate is not trusted",
             # macOS with revocation checks
             "certificates do not meet pinning requirements",
+            # macOS 10.12
+            "Recoverable trust failure occurred",
             # Windows
             (
                 "A certificate chain processed, but terminated in a root "
@@ -112,6 +120,8 @@ failure_hosts_list = [
             "“superfish.badssl.com” certificate is not trusted",
             # macOS with revocation checks
             "certificates do not meet pinning requirements",
+            # macOS 10.12
+            "Recoverable trust failure occurred",
             # Windows
             (
                 "A certificate chain processed, but terminated in a root "
@@ -134,6 +144,8 @@ if platform.system() != "Linux":
             error_messages=[
                 # macOS
                 "“revoked.badssl.com” certificate is revoked",
+                # macOS 10.12
+                "Unknown error occurred",
                 # Windows
                 "The certificate is revoked.",
             ],
