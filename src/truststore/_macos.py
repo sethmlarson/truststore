@@ -447,7 +447,7 @@ def _verify_peercerts_impl(
         # so we use SecTrustEvaluate() which means we need to construct error
         # messages ourselves.
         if 1 or _mac_version_info < (10, 12):
-            _verify_peercerts_impl_macos_10_12(trust)
+            _verify_peercerts_impl_macos_10_12(ssl_context, trust)
         else:
             _verify_peercerts_impl_macos_10_13(ssl_context, trust)
     finally:
@@ -457,7 +457,9 @@ def _verify_peercerts_impl(
             CoreFoundation.CFRelease(trust)
 
 
-def _verify_peercerts_impl_macos_10_12(sec_trust_ref: typing.Any) -> None:
+def _verify_peercerts_impl_macos_10_12(
+    ssl_context: ssl.SSLContext, sec_trust_ref: typing.Any
+) -> None:
     """Verify using 'SecTrustEvaluate' API for macOS 10.12 and earlier.
     macOS 10.13 added the 'SecTrustEvaluateWithError' API.
     """
@@ -470,7 +472,13 @@ def _verify_peercerts_impl_macos_10_12(sec_trust_ref: typing.Any) -> None:
         sec_trust_result_type_as_int = -1
 
     # See: https://developer.apple.com/documentation/security/sectrustevaluate(_:_:)?language=objc
-    if sec_trust_result_type_as_int not in (1, 4):
+    if (
+        ssl_context.verify_mode == ssl.CERT_REQUIRED
+        and sec_trust_result_type_as_int not in (1, 4)
+    ):
+        # Note that we're not able to ignore only hostname errors
+        # for macOS 10.12 and earlier, so check_hostname=False will
+        # still return an error.
         sec_trust_result_type_to_message = {
             0: "Invalid trust result type",
             # 1: "Trust evaluation succeeded",
