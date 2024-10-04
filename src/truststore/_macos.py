@@ -25,6 +25,8 @@ if _mac_version_info < (10, 8):
         f"Only OS X 10.8 and newer are supported, not {_mac_version_info[0]}.{_mac_version_info[1]}"
     )
 
+_is_macos_version_10_14_or_later = _mac_version_info >= (10, 14)
+
 
 def _load_cdll(name: str, macos10_16_path: str) -> CDLL:
     """Loads a CDLL by name, falling back to known path on 10.16+"""
@@ -443,11 +445,11 @@ def _verify_peercerts_impl(
         # We always want system certificates.
         Security.SecTrustSetAnchorCertificatesOnly(trust, False)
 
-        # macOS 10.12 and earlier don't support SecTrustEvaluateWithError()
+        # macOS 10.13 and earlier don't support SecTrustEvaluateWithError()
         # so we use SecTrustEvaluate() which means we need to construct error
         # messages ourselves.
-        if 1 or _mac_version_info < (10, 12):
-            _verify_peercerts_impl_macos_10_12(ssl_context, trust)
+        if _is_macos_version_10_14_or_later:
+            _verify_peercerts_impl_macos_10_14(ssl_context, trust)
         else:
             _verify_peercerts_impl_macos_10_13(ssl_context, trust)
     finally:
@@ -457,11 +459,11 @@ def _verify_peercerts_impl(
             CoreFoundation.CFRelease(trust)
 
 
-def _verify_peercerts_impl_macos_10_12(
+def _verify_peercerts_impl_macos_10_13(
     ssl_context: ssl.SSLContext, sec_trust_ref: typing.Any
 ) -> None:
-    """Verify using 'SecTrustEvaluate' API for macOS 10.12 and earlier.
-    macOS 10.13 added the 'SecTrustEvaluateWithError' API.
+    """Verify using 'SecTrustEvaluate' API for macOS 10.13 and earlier.
+    macOS 10.14 added the 'SecTrustEvaluateWithError' API.
     """
     sec_trust_result_type = Security.SecTrustResultType()
     Security.SecTrustEvaluate(sec_trust_ref, ctypes.byref(sec_trust_result_type))
@@ -477,7 +479,7 @@ def _verify_peercerts_impl_macos_10_12(
         and sec_trust_result_type_as_int not in (1, 4)
     ):
         # Note that we're not able to ignore only hostname errors
-        # for macOS 10.12 and earlier, so check_hostname=False will
+        # for macOS 10.13 and earlier, so check_hostname=False will
         # still return an error.
         sec_trust_result_type_to_message = {
             0: "Invalid trust result type",
@@ -500,10 +502,10 @@ def _verify_peercerts_impl_macos_10_12(
         raise err
 
 
-def _verify_peercerts_impl_macos_10_13(
+def _verify_peercerts_impl_macos_10_14(
     ssl_context: ssl.SSLContext, sec_trust_ref: typing.Any
 ) -> None:
-    """Verify using 'SecTrustEvaluateWithError' API for macOS 10.13+."""
+    """Verify using 'SecTrustEvaluateWithError' API for macOS 10.14+."""
     cf_error = CoreFoundation.CFErrorRef()
     sec_trust_eval_result = Security.SecTrustEvaluateWithError(
         sec_trust_ref, ctypes.byref(cf_error)
