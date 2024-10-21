@@ -49,6 +49,8 @@ failure_hosts_list = [
             "certificate name does not match",
             # macOS with revocation checks
             "certificates do not meet pinning requirements",
+            # macOS 10.13
+            "Recoverable trust failure occurred",
             # Windows
             "The certificate's CN name does not match the passed value.",
         ],
@@ -62,6 +64,8 @@ failure_hosts_list = [
             "“*.badssl.com” certificate is expired",
             # macOS with revocation checks
             "certificates do not meet pinning requirements",
+            # macOS 10.13
+            "Recoverable trust failure occurred",
             # Windows
             (
                 "A required certificate is not within its validity period when verifying "
@@ -79,6 +83,8 @@ failure_hosts_list = [
             "“*.badssl.com” certificate is not trusted",
             # macOS with revocation checks
             "certificates do not meet pinning requirements",
+            # macOS 10.13
+            "Recoverable trust failure occurred",
             # Windows
             (
                 "A certificate chain processed, but terminated in a root "
@@ -96,6 +102,8 @@ failure_hosts_list = [
             "“BadSSL Untrusted Root Certificate Authority” certificate is not trusted",
             # macOS with revocation checks
             "certificates do not meet pinning requirements",
+            # macOS 10.13
+            "Recoverable trust failure occurred",
             # Windows
             (
                 "A certificate chain processed, but terminated in a root "
@@ -112,6 +120,8 @@ failure_hosts_list = [
             "“superfish.badssl.com” certificate is not trusted",
             # macOS with revocation checks
             "certificates do not meet pinning requirements",
+            # macOS 10.13
+            "Recoverable trust failure occurred",
             # Windows
             (
                 "A certificate chain processed, but terminated in a root "
@@ -134,6 +144,8 @@ if platform.system() != "Linux":
             error_messages=[
                 # macOS
                 "“revoked.badssl.com” certificate is revoked",
+                # macOS 10.13
+                "Fatal trust failure occurred",
                 # Windows
                 "The certificate is revoked.",
             ],
@@ -143,6 +155,24 @@ if platform.system() != "Linux":
 failure_hosts = decorator_requires_internet(
     pytest.mark.parametrize("failure", failure_hosts_list, ids=attrgetter("host"))
 )
+
+# Fixture which tests both the SecTrustEvaluate (macOS <=10.13) and
+# SecTrustEvaluateWithError (macOS >=10.14) APIs
+# on macOS versions that support both APIs.
+if platform.system() == "Darwin" and tuple(
+    map(int, platform.mac_ver()[0].split("."))
+) >= (10, 14):
+
+    @pytest.fixture(autouse=True, params=[True, False])
+    def mock_macos_version_10_13(request):
+        import truststore._macos
+
+        prev = truststore._macos._is_macos_version_10_14_or_later
+        truststore._macos._is_macos_version_10_14_or_later = request.param
+        try:
+            yield
+        finally:
+            truststore._macos._is_macos_version_10_14_or_later = prev
 
 
 @pytest.fixture
