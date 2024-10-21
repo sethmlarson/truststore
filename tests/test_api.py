@@ -145,7 +145,7 @@ if platform.system() != "Linux":
                 # macOS
                 "“revoked.badssl.com” certificate is revoked",
                 # macOS 10.13
-                "Other error occurred, certificate may be revoked",
+                "Fatal trust failure occurred",
                 # Windows
                 "The certificate is revoked.",
             ],
@@ -157,7 +157,7 @@ failure_hosts = decorator_requires_internet(
 )
 
 # Fixture which tests both the SecTrustEvaluate (macOS <=10.13) and
-# SecTrustEvaluteWithError (macOS >=10.14) APIs
+# SecTrustEvaluateWithError (macOS >=10.14) APIs
 # on macOS versions that support both APIs.
 if platform.system() == "Darwin" and tuple(
     map(int, platform.mac_ver()[0].split("."))

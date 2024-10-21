@@ -123,12 +123,6 @@ try:
     ]
     Security.SecTrustEvaluate.restype = OSStatus
 
-    Security.SecTrustEvaluateWithError.argtypes = [
-        SecTrustRef,
-        POINTER(CFErrorRef),
-    ]
-    Security.SecTrustEvaluateWithError.restype = c_bool
-
     Security.SecTrustRef = SecTrustRef  # type: ignore[attr-defined]
     Security.SecTrustResultType = SecTrustResultType  # type: ignore[attr-defined]
     Security.OSStatus = OSStatus  # type: ignore[attr-defined]
@@ -211,8 +205,19 @@ try:
     CoreFoundation.CFStringRef = CFStringRef  # type: ignore[attr-defined]
     CoreFoundation.CFErrorRef = CFErrorRef  # type: ignore[attr-defined]
 
-except AttributeError:
-    raise ImportError("Error initializing ctypes") from None
+except AttributeError as e:
+    raise ImportError(f"Error initializing ctypes: {e}") from None
+
+# SecTrustEvaluateWithError is macOS 10.14+
+if _is_macos_version_10_14_or_later:
+    try:
+        Security.SecTrustEvaluateWithError.argtypes = [
+            SecTrustRef,
+            POINTER(CFErrorRef),
+        ]
+        Security.SecTrustEvaluateWithError.restype = c_bool
+    except AttributeError as e:
+        raise ImportError(f"Error initializing ctypes: {e}") from None
 
 
 def _handle_osstatus(result: OSStatus, _: typing.Any, args: typing.Any) -> typing.Any:
