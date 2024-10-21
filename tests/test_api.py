@@ -145,7 +145,7 @@ if platform.system() != "Linux":
                 # macOS
                 "“revoked.badssl.com” certificate is revoked",
                 # macOS 10.13
-                "Unknown error occurred",
+                "Other error occurred, certificate may be revoked",
                 # Windows
                 "The certificate is revoked.",
             ],

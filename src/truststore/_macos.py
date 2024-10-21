@@ -473,7 +473,8 @@ def _verify_peercerts_impl_macos_10_13(
     except (ValueError, TypeError):
         sec_trust_result_type_as_int = -1
 
-    # See: https://developer.apple.com/documentation/security/sectrustevaluate(_:_:)?language=objc
+    # Apple doesn't document these values in their own API docs.
+    # See: https://github.com/xybp888/iOS-SDKs/blob/master/iPhoneOS13.0.sdk/System/Library/Frameworks/Security.framework/Headers/SecTrust.h#L84
     if (
         ssl_context.verify_mode == ssl.CERT_REQUIRED
         and sec_trust_result_type_as_int not in (1, 4)
@@ -484,12 +485,12 @@ def _verify_peercerts_impl_macos_10_13(
         sec_trust_result_type_to_message = {
             0: "Invalid trust result type",
             # 1: "Trust evaluation succeeded",
-            2: "Trust was explicitly denied",
-            3: "Fatal trust failure occurred",
-            # 4: "Trust result is unspecified (but trusted)",
+            2: "User confirmation required",
+            3: "User specified that certificate is not trusted",
+            # 4: "Trust result is unspecified",
             5: "Recoverable trust failure occurred",
-            6: "Unknown error occurred",
-            7: "User confirmation required",
+            6: "Fatal trust failure occurred",
+            7: "Other error occurred, certificate may be revoked",
         }
         error_message = sec_trust_result_type_to_message.get(
             sec_trust_result_type_as_int,
