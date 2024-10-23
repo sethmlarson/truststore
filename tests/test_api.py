@@ -39,22 +39,23 @@ class FailureHost:
     error_messages: list[str]
 
 
+wrong_host_failure_host = FailureHost(
+    host="wrong.host.badssl.com",
+    error_messages=[
+        # OpenSSL
+        "Hostname mismatch, certificate is not valid for 'wrong.host.badssl.com'",
+        # macOS
+        "certificate name does not match",
+        # macOS with revocation checks
+        "certificates do not meet pinning requirements",
+        # macOS 10.13
+        "Recoverable trust failure occurred",
+        # Windows
+        "The certificate's CN name does not match the passed value.",
+    ],
+)
 failure_hosts_list = [
-    FailureHost(
-        host="wrong.host.badssl.com",
-        error_messages=[
-            # OpenSSL
-            "Hostname mismatch, certificate is not valid for 'wrong.host.badssl.com'",
-            # macOS
-            "certificate name does not match",
-            # macOS with revocation checks
-            "certificates do not meet pinning requirements",
-            # macOS 10.13
-            "Recoverable trust failure occurred",
-            # Windows
-            "The certificate's CN name does not match the passed value.",
-        ],
-    ),
+    wrong_host_failure_host,
     FailureHost(
         host="expired.badssl.com",
         error_messages=[
@@ -369,6 +370,21 @@ def test_requests_sslcontext_api_failures(failure):
             http.request("GET", f"https://{host}")
 
     assert "cert" in repr(e.value).lower() and "verif" in repr(e.value).lower()
+
+
+def test_wrong_host_succeeds_with_hostname_verification_disabled() -> None:
+    global wrong_host_failure_host
+
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    assert ctx.check_hostname is False
+
+    with urllib3.PoolManager(ssl_context=ctx, retries=5, assert_hostname=False) as http:
+        resp = http.request("GET", f"https://{wrong_host_failure_host.host}")
+
+    assert resp.status == 200
+    assert len(resp.data) > 0
+    assert ctx.check_hostname is False
 
 
 def test_trustme_cert(trustme_ca, httpserver):
