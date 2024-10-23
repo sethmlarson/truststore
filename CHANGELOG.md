@@ -1,3 +1,13 @@
+# 0.10.0
+
+* Added support for macOS 10.13 and earlier using the `SecTrustEvaluate` API. Note that
+  this API doesn't return fine-grained errors like `SecTrustEvaluateWithError` (requires macOS 10.14+).
+* Added `SSLContext.set_default_verify_paths()` method.
+* Changed method for disabling hostname verification for macOS and Windows.
+  Previously would ignore hostname verification errors if `SSLContext.check_hostname` was `False`.
+  Now for both macOS and Windows the certificate verification policy is configured
+  to not check certificate hostname. This should have no effect on users.
+
 # 0.9.2
 
 * Fixed an issue where implementations supporting Python 3.10 but not the peer certificate chain APIs
