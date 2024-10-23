@@ -1,13 +1,11 @@
 import asyncio
 import pathlib
 import ssl
-import subprocess
 import sys
 
 import httpx
 import pytest
 import urllib3
-from aiohttp import ClientSession
 
 import truststore
 from tests.conftest import Server, successful_hosts
@@ -92,20 +90,25 @@ async def test_urllib3_works_with_inject(server: Server) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("inject_truststore")
 async def test_aiohttp_works_with_inject(server: Server) -> None:
-    async with ClientSession() as client:
-        resp = await client.get(server.base_url)
-        assert resp.status == 200
-
-
-@pytest.mark.internet
-def test_requests_works_with_inject() -> None:
     # We completely isolate the requests module because
     # pytest or some other part of our test infra is messing
     # with the order it's loaded into modules.
-    script = pathlib.Path(__file__).parent / "requests_with_inject.py"
-    subprocess.check_output([sys.executable, script])
+    script = str(pathlib.Path(__file__).parent / "aiohttp_with_inject.py")
+    proc = await asyncio.create_subprocess_exec(sys.executable, script)
+    await proc.wait()
+    assert proc.returncode == 200
+
+
+@pytest.mark.asyncio
+async def test_requests_works_with_inject(server: Server) -> None:
+    # We completely isolate the requests module because
+    # pytest or some other part of our test infra is messing
+    # with the order it's loaded into modules.
+    script = str(pathlib.Path(__file__).parent / "requests_with_inject.py")
+    proc = await asyncio.create_subprocess_exec(sys.executable, script)
+    await proc.wait()
+    assert proc.returncode == 200
 
 
 @pytest.mark.asyncio
