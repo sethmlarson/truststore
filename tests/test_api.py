@@ -257,6 +257,8 @@ def test_failure_after_loading_additional_anchors(failure, trustme_ca):
         socket.create_connection((failure.host, 443)) as sock,
     ):
         ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        if platform.system() != "Linux":
+            ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
 
         # See if loading additional anchors still fails.
         trustme_ca.configure_trust(ctx)
