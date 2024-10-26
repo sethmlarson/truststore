@@ -372,6 +372,7 @@ def test_requests_sslcontext_api_failures(failure):
     assert "cert" in repr(e.value).lower() and "verif" in repr(e.value).lower()
 
 
+@pytest.mark.internet
 def test_wrong_host_succeeds_with_hostname_verification_disabled() -> None:
     global wrong_host_failure_host
 
