@@ -1,4 +1,3 @@
-import asyncio
 import importlib
 import os
 import platform
@@ -300,13 +299,14 @@ def test_sslcontext_api_success(host):
 @pytest.mark.asyncio
 async def test_sslcontext_api_success_async(host):
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    async with aiohttp.ClientSession() as http:
+    # connector avoids https://github.com/aio-libs/aiohttp/issues/5426
+    async with aiohttp.ClientSession(
+        connector=aiohttp.TCPConnector(force_close=True, enable_cleanup_closed=True)
+    ) as http:
         resp = await http.request("GET", f"https://{host}", ssl=ctx)
 
         assert resp.status == 200
         assert len(await resp.text()) > 0
-    # workaround https://github.com/aio-libs/aiohttp/issues/5426
-    await asyncio.sleep(0.2)
 
 
 @failure_hosts
@@ -328,14 +328,14 @@ async def test_sslcontext_api_failures_async(failure):
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     if platform.system() != "Linux":
         ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
-    async with aiohttp.ClientSession() as http:
+    # connector avoids https://github.com/aio-libs/aiohttp/issues/5426
+    async with aiohttp.ClientSession(
+        connector=aiohttp.TCPConnector(force_close=True, enable_cleanup_closed=True)
+    ) as http:
         with pytest.raises(
             aiohttp.client_exceptions.ClientConnectorCertificateError
         ) as e:
             await http.request("GET", f"https://{failure.host}", ssl=ctx)
-
-    # workaround https://github.com/aio-libs/aiohttp/issues/5426
-    await asyncio.sleep(0.2)
 
     assert "cert" in repr(e.value).lower() and "verif" in repr(e.value).lower()
 
