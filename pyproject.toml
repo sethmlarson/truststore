@@ -34,6 +34,7 @@ Documentation = "https://truststore.readthedocs.io"
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
   "error",
   # See: aio-libs/aiohttp#7545
