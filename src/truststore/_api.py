@@ -34,12 +34,30 @@ def inject_into_ssl() -> None:
     module by replacing :class:`ssl.SSLContext`.
     """
     setattr(ssl, "SSLContext", SSLContext)
+
     # urllib3 holds on to its own reference of ssl.SSLContext
     # so we need to replace that reference too.
     try:
         import urllib3.util.ssl_ as urllib3_ssl
 
         setattr(urllib3_ssl, "SSLContext", SSLContext)
+    except ImportError:
+        pass
+
+    # requests starting with 3.23.0 added a preloaded SSL context to improve concurrent performance;
+    # this unfortunately leads to a RecursionError, which can be avoided by patching the preloaded SSL context with
+    # the truststore patched instance
+    # also see https://github.com/psf/requests/pull/6667
+    try:
+        import requests.adapters
+
+        preloaded_context = getattr(requests.adapters, "_preloaded_ssl_context", None)
+        if preloaded_context is not None:
+            setattr(
+                requests.adapters,
+                "_preloaded_ssl_context",
+                SSLContext(ssl.PROTOCOL_TLS_CLIENT),
+            )
     except ImportError:
         pass
 
