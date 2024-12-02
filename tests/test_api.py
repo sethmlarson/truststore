@@ -301,7 +301,7 @@ async def test_sslcontext_api_success_async(host):
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     # connector avoids https://github.com/aio-libs/aiohttp/issues/5426
     async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(force_close=True, enable_cleanup_closed=True)
+        connector=aiohttp.TCPConnector(force_close=True)
     ) as http:
         resp = await http.request("GET", f"https://{host}", ssl=ctx)
 
@@ -330,7 +330,7 @@ async def test_sslcontext_api_failures_async(failure):
         ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
     # connector avoids https://github.com/aio-libs/aiohttp/issues/5426
     async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(force_close=True, enable_cleanup_closed=True)
+        connector=aiohttp.TCPConnector(force_close=True)
     ) as http:
         with pytest.raises(
             aiohttp.client_exceptions.ClientConnectorCertificateError
