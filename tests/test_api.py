@@ -296,6 +296,7 @@ def test_sslcontext_api_success(host):
 
 
 @successful_hosts
+@pytest.mark.filterwarnings("ignore:enable_cleanup_closed ignored.*:DeprecationWarning")
 @pytest.mark.asyncio
 async def test_sslcontext_api_success_async(host):
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -323,6 +324,7 @@ def test_sslcontext_api_failures(failure):
 
 
 @failure_hosts
+@pytest.mark.filterwarnings("ignore:enable_cleanup_closed ignored.*:DeprecationWarning")
 @pytest.mark.asyncio
 async def test_sslcontext_api_failures_async(failure):
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
