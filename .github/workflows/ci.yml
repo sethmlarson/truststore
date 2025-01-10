@@ -84,7 +84,7 @@ jobs:
   compileall:
     # Run 'python -m compileall' on an old Python version
     # to ensure that pip can vendor truststore successfully.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04 # pin to 22.04, as with 24.04 Python 3.7 is no longer available
     name: compileall
     steps:
       - uses: actions/checkout@v4
