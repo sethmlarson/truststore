@@ -5,7 +5,7 @@ import ssl
 import sys
 import typing
 
-import _ssl  # type: ignore[import-not-found]
+import _ssl
 
 from ._ssl_constants import (
     _original_SSLContext,
