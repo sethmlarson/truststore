@@ -34,7 +34,6 @@ def inject_into_ssl() -> None:
     module by replacing :class:`ssl.SSLContext`.
     """
     setattr(ssl, "SSLContext", SSLContext)
-
     # urllib3 holds on to its own reference of ssl.SSLContext
     # so we need to replace that reference too.
     try:
