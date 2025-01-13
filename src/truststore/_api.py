@@ -43,7 +43,7 @@ def inject_into_ssl() -> None:
     except ImportError:
         pass
 
-    # requests starting with 3.23.0 added a preloaded SSL context to improve concurrent performance;
+    # requests starting with 2.32.0 added a preloaded SSL context to improve concurrent performance;
     # this unfortunately leads to a RecursionError, which can be avoided by patching the preloaded SSL context with
     # the truststore patched instance
     # also see https://github.com/psf/requests/pull/6667
