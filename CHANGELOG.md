@@ -1,3 +1,12 @@
+# 0.10.1
+
+* Fixed the patching of Requests' globally-cached `ssl.SSLContext`
+  object to work automagically with ``truststore.inject_into_ssl()``
+  regardless of import-order.
+* Speed up import times on Linux by skipping `hasattr` check for known Python
+  implementations (CPython and PyPy) when doing feature detection to avoid
+  expensive call to `create_default_context()` on import time.
+
 # 0.10.0
 
 * Added support for macOS 10.13 and earlier using the `SecTrustEvaluate` API. Note that
