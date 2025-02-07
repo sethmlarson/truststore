@@ -1,3 +1,11 @@
+# 0.10.1
+
+* Fixed the patching of Requests' globally-cached `ssl.SSLContext`
+  object to work automagically with ``truststore.inject_into_ssl()``
+  regardless of import-order.
+* Speed up import times by skipping feature-checking for known Python
+  implementations (CPython and PyPy).
+
 # 0.10.0
 
 * Added support for macOS 10.13 and earlier using the `SecTrustEvaluate` API. Note that
