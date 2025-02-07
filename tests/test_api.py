@@ -291,7 +291,9 @@ def test_sslcontext_api_success(host):
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
         resp = http.request("GET", f"https://{host}")
-    assert resp.status == 200
+    # Cloudflare rejects some of our CI requests and
+    # that's okay because we only care about the TLS handshake.
+    assert resp.status in (200, 403)
     assert len(resp.data) > 0
 
 
