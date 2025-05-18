@@ -17,7 +17,7 @@ from ._ssl_constants import (
 if platform.system() == "Windows":
     from ._windows import _configure_context, _verify_peercerts_impl
 elif platform.system() == "Darwin":
-    from ._macos import _configure_context, _verify_peercerts_impl
+    from ._macos import _configure_context, _verify_peercerts_impl, _load_default_certs_impl
 else:
     from ._openssl import _configure_context, _verify_peercerts_impl
 
@@ -166,7 +166,10 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
     def load_default_certs(
         self, purpose: ssl.Purpose = ssl.Purpose.SERVER_AUTH
     ) -> None:
-        return self._ctx.load_default_certs(purpose)
+        if sys.platform == "darwin":
+            return _load_default_certs_impl(self._ctx)
+        else:
+            return self._ctx.load_default_certs(purpose)
 
     def set_alpn_protocols(self, alpn_protocols: typing.Iterable[str]) -> None:
         return self._ctx.set_alpn_protocols(alpn_protocols)
@@ -190,18 +193,16 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         self._ctx.set_default_verify_paths()
 
     @typing.overload
-    def get_ca_certs(
-        self, binary_form: typing.Literal[False] = ...
-    ) -> list[typing.Any]: ...
-
-    @typing.overload
     def get_ca_certs(self, binary_form: typing.Literal[True] = ...) -> list[bytes]: ...
 
     @typing.overload
     def get_ca_certs(self, binary_form: bool = ...) -> typing.Any: ...
 
-    def get_ca_certs(self, binary_form: bool = False) -> list[typing.Any] | list[bytes]:
-        raise NotImplementedError()
+    @typing.overload
+    def get_ca_certs(self, binary_form: bool = ...) -> typing.Any: ...
+    
+    def get_ca_certs(self, binary_form: bool = False):
+        return self._ctx.get_ca_certs(binary_form=binary_form)
 
     @property
     def check_hostname(self) -> bool:

@@ -123,6 +123,9 @@ try:
     ]
     Security.SecTrustEvaluate.restype = OSStatus
 
+    Security.SecTrustCopyAnchorCertificates.argtypes = [CFArrayRef]
+    Security.SecTrustCopyAnchorCertificates.restype = OSStatus
+
     Security.SecTrustRef = SecTrustRef  # type: ignore[attr-defined]
     Security.SecTrustResultType = SecTrustResultType  # type: ignore[attr-defined]
     Security.OSStatus = OSStatus  # type: ignore[attr-defined]
@@ -278,7 +281,7 @@ Security.SecTrustSetAnchorCertificates.errcheck = _handle_osstatus  # type: igno
 Security.SecTrustSetAnchorCertificatesOnly.errcheck = _handle_osstatus  # type: ignore[assignment]
 Security.SecTrustGetTrustResult.errcheck = _handle_osstatus  # type: ignore[assignment]
 Security.SecTrustEvaluate.errcheck = _handle_osstatus  # type: ignore[assignment]
-
+Security.SecTrustCopyAnchorCertificates.errcheck = _handle_osstatus # type: ignore[assignment]
 
 class CFConst:
     """CoreFoundation constants"""
@@ -569,3 +572,35 @@ def _verify_peercerts_impl_macos_10_14(
         finally:
             if cf_error_string_ref:
                 CoreFoundation.CFRelease(cf_error_string_ref)
+
+
+def _load_default_certs_impl(ssl_context: ssl.SSLContext) -> None:
+    """
+    Loads the default system certificates into the SSLContext.
+    """
+
+    certs_array = CoreFoundation.CFArrayRef()
+    Security.SecTrustSettingsCopyCertificates(
+        ctypes.byref(certs_array)
+    )
+
+    count = CoreFoundation.CFArrayGetCount(certs_array)
+
+    for i in range(count):
+        # Get the certificate from the array
+        cert_ref = CoreFoundation.CFArrayGetValueAtIndex(certs_array, i)
+        data_ref = Security.SecCertificateCopyData(cert_ref)
+
+        length = CoreFoundation.CFDataGetLength(data_ref)
+        data_ptr = CoreFoundation.CFDataGetBytePtr(data_ref)
+
+        cert_bytes = ctypes.string_at(data_ptr, length)
+
+        # Load the certificate into the SSLContext
+        ssl_context.load_verify_locations(
+            cadata=cert_bytes
+        )
+
+        CoreFoundation.CFRelease(data_ref)
+
+    CoreFoundation.CFRelease(certs_array)
