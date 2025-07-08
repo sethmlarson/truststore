@@ -146,6 +146,10 @@ if platform.system() != "Linux":
                 "“revoked.badssl.com” certificate is revoked",
                 # macOS 10.13
                 "Fatal trust failure occurred",
+                # macOS 10.14 ISRG Root X1 expired (SecTrustEvaluateWithError)
+                "certificates do not meet pinning requirements",
+                # macOS 10.13 ISRG Root X1 expired (SecTrustEvaluate)
+                "Recoverable trust failure occurred",
                 # Windows
                 "The certificate is revoked.",
             ],
@@ -378,8 +382,6 @@ def test_requests_sslcontext_api_failures(failure):
 
 @pytest.mark.internet
 def test_wrong_host_succeeds_with_hostname_verification_disabled() -> None:
-    global wrong_host_failure_host
-
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.check_hostname = False
     assert ctx.check_hostname is False

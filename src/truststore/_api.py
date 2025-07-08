@@ -67,7 +67,7 @@ def extract_from_ssl() -> None:
     try:
         import urllib3.util.ssl_ as urllib3_ssl
 
-        urllib3_ssl.SSLContext = _original_SSLContext  # type: ignore[assignment]
+        urllib3_ssl.SSLContext = _original_SSLContext
     except ImportError:
         pass
 
