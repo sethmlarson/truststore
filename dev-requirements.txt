@@ -1,6 +1,6 @@
-aiohttp<3.12.7
+aiohttp
 pyopenssl
-pytest
+pytest==8.3.5
 pytest-asyncio
 pytest-httpserver
 urllib3
