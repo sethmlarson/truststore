@@ -22,7 +22,7 @@ jobs:
 
       - name: "Build dists"
         run: |
-          python -m pip install -r .github/workflow/deploy-requirements.txt
+          python -m pip install -r .github/workflows/deploy-requirements.txt
           SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct) \
           python -m build
 
