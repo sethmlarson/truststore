@@ -1,3 +1,7 @@
+# 0.10.2
+
+* Added support for the system certificate bundle in Fedora 43 and later.
+
 # 0.10.1
 
 * Fixed the patching of Requests' globally-cached `ssl.SSLContext`
