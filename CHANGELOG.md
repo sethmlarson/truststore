@@ -1,6 +1,11 @@
-# 0.10.2
+# 0.10.3
 
 * Added support for the system certificate bundle in Fedora 43 and later.
+
+# 0.10.2
+
+* Release failed to publish to PyPI due to outdated build tools.
+  Created new release (0.10.3) after updating `build` to 1.2.2.post1.
 
 # 0.10.1
 
