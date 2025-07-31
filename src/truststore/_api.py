@@ -60,6 +60,14 @@ def inject_into_ssl() -> None:
     except ImportError:
         pass
 
+    # replace reference kept by botocore as well
+    try:
+        import botocore.httpsession
+
+        setattr(botocore.httpsession, "SSLContext", SSLContext)
+    except ImportError:
+        pass
+
 
 def extract_from_ssl() -> None:
     """Restores the :class:`ssl.SSLContext` class to its original state"""
