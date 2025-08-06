@@ -1,11 +1,10 @@
+import _ssl
 import os
 import platform
 import socket
 import ssl
 import sys
 import typing
-
-import _ssl
 
 from ._ssl_constants import (
     _original_SSLContext,
