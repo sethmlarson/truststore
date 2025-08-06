@@ -25,7 +25,7 @@ repos:
         args: ["--ignore=E501,E203,W503,W504,E704", "--max-line-length=99"]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.16.1
+    rev: v1.17.1
     hooks:
       - id: mypy
         args: ["--strict"]
