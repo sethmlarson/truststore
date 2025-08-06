@@ -2,7 +2,7 @@
 
 import sys as _sys
 
-if _sys.version_info < (3, 10):
+if _sys.version_info < (3, 10):  # noqa: UP036
     raise ImportError("truststore requires Python 3.10 or later")
 
 # Detect Python runtimes which don't implement SSLObject.get_unverified_chain() API
