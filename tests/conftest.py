@@ -172,4 +172,6 @@ async def server(mkcert_certs: CertFiles) -> typing.AsyncIterator[Server]:
         yield Server(host="localhost", port=port)
     finally:
         await site.stop()
+        # Wait for the server to actually close.
+        await site._server.wait_closed()
         await runner.cleanup()
