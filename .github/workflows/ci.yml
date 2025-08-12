@@ -7,7 +7,7 @@ on:
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: '7 5 * * *'
+    - cron: "7 5 * * *"
 
 defaults:
   run:
@@ -30,11 +30,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-14, windows-latest, ubuntu-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14-dev", "pypy3.10"]
 
     runs-on: ${{ matrix.os }}
-    name: ${{ fromJson('{"macos-latest":"macOS","windows-latest":"Windows","ubuntu-latest":"Ubuntu"}')[matrix.os] }} Python ${{ matrix.python-version }}
+    name: ${{ fromJson('{"macos-14":"macOS","windows-latest":"Windows","ubuntu-latest":"Ubuntu"}')[matrix.os] }} Python ${{ matrix.python-version }}
     continue-on-error: false
     timeout-minutes: 10
     steps:
