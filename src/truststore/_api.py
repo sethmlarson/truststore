@@ -1,3 +1,4 @@
+import contextlib
 import os
 import platform
 import socket
@@ -113,11 +114,9 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         # but we don't need to lock within the
         # context manager, so we need to expand the
         # syntactic sugar of the `with` statement.
-        ctxmgr = None
-        try:
+        with contextlib.ExitStack() as stack:
             with self._ctx_lock:
-                ctxmgr = _configure_context(self._ctx)
-                ctxmgr.__enter__()
+                stack.enter_context(_configure_context(self._ctx))
 
             ssl_sock = self._ctx.wrap_socket(
                 sock,
@@ -127,12 +126,6 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
                 suppress_ragged_eofs=suppress_ragged_eofs,
                 session=session,
             )
-        except:  # noqa: E722
-            if ctxmgr is None or not ctxmgr.__exit__(*sys.exc_info()):
-                raise
-        finally:
-            if ctxmgr is not None:
-                ctxmgr.__exit__(None, None, None)
         try:
             _verify_peercerts(ssl_sock, server_hostname=server_hostname)
         except Exception:
