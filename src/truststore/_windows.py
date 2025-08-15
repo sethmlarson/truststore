@@ -1,4 +1,4 @@
-import contextlib
+import contextlib  # noqa: I001
 import ssl
 import typing
 from ctypes import WinDLL  # type: ignore

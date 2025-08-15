@@ -1,28 +1,9 @@
 repos:
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.20.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.9
     hooks:
-      - id: pyupgrade
-        args: ["--py39-plus"]  # Match pip's minimum
-
-  - repo: https://github.com/psf/black
-    rev: 25.1.0
-    hooks:
-      - id: black
-        args: ["--target-version", "py39"]  # Match pip's minimum
-
-  - repo: https://github.com/PyCQA/isort
-    rev: 6.0.1
-    hooks:
-      - id: isort
-        args: ["--profile=black"]
-
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.3.0
-    hooks:
-      - id: flake8
-        additional_dependencies: [flake8-2020]
-        args: ["--ignore=E501,E203,W503,W504,E704", "--max-line-length=99"]
+      - id: ruff-check
+      - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.16.1

@@ -1,3 +1,4 @@
+import _ssl
 import contextlib
 import os
 import platform
@@ -6,8 +7,6 @@ import ssl
 import sys
 import threading
 import typing
-
-import _ssl
 
 from ._ssl_constants import (
     _original_SSLContext,
@@ -109,7 +108,6 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         server_hostname: str | None = None,
         session: ssl.SSLSession | None = None,
     ) -> ssl.SSLSocket:
-
         # We need to lock around the .__enter__()
         # but we don't need to lock within the
         # context manager, so we need to expand the
