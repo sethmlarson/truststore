@@ -46,3 +46,10 @@ markers = [
 
 [tool.flit.sdist]
 include = ["docs", "tests"]
+
+[tool.ruff.lint]
+extend-select = [
+    "YTT",
+    "I",
+    "UP",
+]
