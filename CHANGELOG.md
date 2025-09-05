@@ -1,3 +1,7 @@
+# 0.10.4
+
+* Fixed a thread-safety issue when configuring the internal `ssl.SSLContext` object.
+
 # 0.10.3
 
 * Added support for the system certificate bundle in Fedora 43 and later.

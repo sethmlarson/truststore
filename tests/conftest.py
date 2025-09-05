@@ -105,10 +105,7 @@ async def mkcert_certs(mkcert: None) -> typing.AsyncIterator[CertFiles]:
         )
 
         cmd = (
-            "mkcert"
-            f" -cert-file {certs.cert_file}"
-            f" -key-file {certs.key_file}"
-            " localhost"
+            f"mkcert -cert-file {certs.cert_file} -key-file {certs.key_file} localhost"
         )
         p = await asyncio.create_subprocess_shell(
             cmd,
@@ -172,4 +169,6 @@ async def server(mkcert_certs: CertFiles) -> typing.AsyncIterator[Server]:
         yield Server(host="localhost", port=port)
     finally:
         await site.stop()
+        # Wait for the server to actually close.
+        await site._server.wait_closed()
         await runner.cleanup()

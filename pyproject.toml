@@ -1,5 +1,5 @@
 [build-system]
-requires = ["flit_core >=3.2,<4"]
+requires = ["flit_core >=3.11,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
@@ -9,11 +9,11 @@ authors = [
   {name = "David Glick", email = "david@glicksoftware.com"}
 ]
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: MacOS",
   "Operating System :: Microsoft",
   "Programming Language :: Python :: 3",
@@ -46,3 +46,10 @@ markers = [
 
 [tool.flit.sdist]
 include = ["docs", "tests"]
+
+[tool.ruff.lint]
+extend-select = [
+    "YTT",
+    "I",
+    "UP",
+]
