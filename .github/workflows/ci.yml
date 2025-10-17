@@ -31,7 +31,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-14, windows-latest, ubuntu-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14-dev", "pypy3.10"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "pypy3.10"]
 
     runs-on: ${{ matrix.os }}
     name: ${{ fromJson('{"macos-14":"macOS","windows-latest":"Windows","ubuntu-latest":"Ubuntu"}')[matrix.os] }} Python ${{ matrix.python-version }}
