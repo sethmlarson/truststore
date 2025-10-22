@@ -180,8 +180,8 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
     def set_npn_protocols(self, npn_protocols: typing.Iterable[str]) -> None:
         return self._ctx.set_npn_protocols(npn_protocols)
 
-    def set_ciphers(self, __cipherlist: str) -> None:
-        return self._ctx.set_ciphers(__cipherlist)
+    def set_ciphers(self, cipherlist: str, /) -> None:
+        return self._ctx.set_ciphers(cipherlist)
 
     def get_ciphers(self) -> typing.Any:
         return self._ctx.get_ciphers()
