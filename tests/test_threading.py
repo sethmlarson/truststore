@@ -21,11 +21,6 @@ def wrap_and_close_sockets(ctx: truststore.SSLContext, host: str, port: int) -> 
                 sock.close()
 
 
-def wrap_bios(ctx: truststore.SSLContext, host: str) -> None:
-    for _ in range(100):
-        ctx.wrap_bio(ssl.MemoryBIO(), ssl.MemoryBIO(), server_hostname=host)
-
-
 @pytest.mark.asyncio
 async def test_threading(server):
     def run_threads():
@@ -78,6 +73,10 @@ def test_threading_wrap_bio():
     so the failure is a native abort or segfault that takes the whole
     process (and therefore the test run) down rather than a failed assert.
     """
+    def wrap_bios(ctx: truststore.SSLContext, host: str) -> None:
+        for _ in range(100):
+            ctx.wrap_bio(ssl.MemoryBIO(), ssl.MemoryBIO(), server_hostname=host)
+
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     threads = [
         threading.Thread(target=wrap_bios, args=(ctx, "localhost")) for _ in range(16)
