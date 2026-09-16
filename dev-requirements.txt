@@ -8,6 +8,7 @@ requests
 flaky
 httpx
 trustme
+gevent; platform_python_implementation == "CPython"
 
 # Temporary stop-gap until cffi supports 3.13
 cffi @ https://github.com/python-cffi/cffi/archive/refs/heads/main.zip; python_version > "3.12"

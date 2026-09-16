@@ -4,7 +4,16 @@ import sys
 # Hold on to the original class so we can create it consistently
 # even if we inject our own SSLContext into the ssl module.
 _original_SSLContext = ssl.SSLContext
-_original_super_SSLContext = super(_original_SSLContext, _original_SSLContext)
+_original_super_SSLContext: object
+if sys.implementation.name == "cpython":
+    # ssl.SSLContext may already be a subclass installed by gevent. Its
+    # superclass is then the Python SSLContext, whose property setters recurse
+    # after monkey patching. Use the C-level descriptors directly instead.
+    from _ssl import _SSLContext
+
+    _original_super_SSLContext = _SSLContext
+else:
+    _original_super_SSLContext = super(_original_SSLContext, _original_SSLContext)
 
 # CPython is known to be good, but non-CPython implementations
 # may implement SSLContext differently so to be safe we don't
