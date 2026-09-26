@@ -16,6 +16,10 @@ _CA_FILE_CANDIDATES = [
     "/etc/ssl/certs/ca-certificates.crt",
     # SUSE
     "/etc/ssl/ca-bundle.pem",
+    # Android stores its system CA certificates as one PEM file per certificate.
+    # Since Android 14 the store lives in the (updatable) Conscrypt APEX module;
+    "/apex/com.android.conscrypt/cacerts",
+    "/system/etc/security/cacerts",
 ]
 
 _HASHED_CERT_FILENAME_RE = re.compile(r"^[0-9a-fA-F]{8}\.[0-9]$")
@@ -37,15 +41,39 @@ def _configure_context(ctx: ssl.SSLContext) -> typing.Iterator[None]:
     if defaults.cafile or (defaults.capath and _capath_contains_certs(defaults.capath)):
         ctx.set_default_verify_paths()
     else:
-        # cafile from OpenSSL doesn't exist
-        # and capath from OpenSSL doesn't contain certs.
-        # Let's search other common locations instead.
+        # cafile from OpenSSL doesn't exist and capath from OpenSSL doesn't
+        # contain certs. If the path is a directory, load a the PEM files in
+        # that directory; if it's a single file, load it as a file.
         for cafile in _CA_FILE_CANDIDATES:
-            if os.path.isfile(cafile):
+            if os.path.isdir(cafile):
+                cadata = load_cadata(cafile)
+                if cadata:
+                    ctx.load_verify_locations(cadata=cadata)
+                    break
+            elif os.path.isfile(cafile):
                 ctx.load_verify_locations(cafile=cafile)
                 break
 
     yield
+
+
+def load_cadata(cadir: str) -> str | None:
+    """Load the CA certificates in a directory by constructing a single PEM
+    string.
+
+    Returns None if no certificates could be found.
+    """
+    pems = []
+    for name in os.listdir(cadir):
+        if _HASHED_CERT_FILENAME_RE.match(name):
+            try:
+                with open(os.path.join(cadir, name), encoding="ascii") as f:
+                    pems.append(f.read())
+            except (OSError, UnicodeDecodeError):
+                pass
+    if pems:
+        return "\n".join(pems)
+    return None
 
 
 def _capath_contains_certs(capath: str) -> bool:
