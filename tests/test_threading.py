@@ -73,6 +73,7 @@ def test_threading_wrap_bio():
     so the failure is a native abort or segfault that takes the whole
     process (and therefore the test run) down rather than a failed assert.
     """
+
     def wrap_bios(ctx: truststore.SSLContext, host: str) -> None:
         for _ in range(100):
             ctx.wrap_bio(ssl.MemoryBIO(), ssl.MemoryBIO(), server_hostname=host)
