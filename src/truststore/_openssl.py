@@ -2,6 +2,7 @@ import contextlib
 import os
 import re
 import ssl
+import threading
 import typing
 
 # candidates based on https://github.com/tiran/certifi-system-store by Christian Heimes
@@ -19,10 +20,25 @@ _CA_FILE_CANDIDATES = [
 ]
 
 _HASHED_CERT_FILENAME_RE = re.compile(r"^[0-9a-fA-F]{8}\.[0-9]$")
+# OpenSSL < 3.4 can append duplicate CApath lookups when default
+# verify paths are set repeatedly on the same SSLContext. Cache only
+# truststore's automatic setup; explicit user calls remain user-controlled.
+_AUTOMATIC_CONFIGURED_ATTR = "_truststore_openssl_automatic_configured"
+_CONFIGURE_LOCK = threading.Lock()
 
 
 @contextlib.contextmanager
 def _configure_context(ctx: ssl.SSLContext) -> typing.Iterator[None]:
+    if not getattr(ctx, _AUTOMATIC_CONFIGURED_ATTR, False):
+        with _CONFIGURE_LOCK:
+            if not getattr(ctx, _AUTOMATIC_CONFIGURED_ATTR, False):
+                _configure_context_once(ctx)
+                setattr(ctx, _AUTOMATIC_CONFIGURED_ATTR, True)
+
+    yield
+
+
+def _configure_context_once(ctx: ssl.SSLContext) -> None:
     # First, check whether the default locations from OpenSSL
     # seem like they will give us a usable set of CA certs.
     # ssl.get_default_verify_paths already takes care of:
@@ -44,8 +60,6 @@ def _configure_context(ctx: ssl.SSLContext) -> typing.Iterator[None]:
             if os.path.isfile(cafile):
                 ctx.load_verify_locations(cafile=cafile)
                 break
-
-    yield
 
 
 def _capath_contains_certs(capath: str) -> bool:
