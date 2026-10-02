@@ -139,7 +139,14 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         server_hostname: str | None = None,
         session: ssl.SSLSession | None = None,
     ) -> ssl.SSLObject:
-        with _configure_context(self._ctx):
+        # We need to lock around the .__enter__()
+        # but we don't need to lock within the
+        # context manager, so we need to expand the
+        # syntactic sugar of the `with` statement.
+        with contextlib.ExitStack() as stack:
+            with self._ctx_lock:
+                stack.enter_context(_configure_context(self._ctx))
+
             ssl_obj = self._ctx.wrap_bio(
                 incoming,
                 outgoing,
