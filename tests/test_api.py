@@ -3,6 +3,7 @@ import os
 import platform
 import socket
 import ssl
+import sys
 import tempfile
 from dataclasses import dataclass
 from operator import attrgetter
@@ -452,3 +453,31 @@ def test_macos_10_7_import_error():
             importlib.reload(truststore._macos)
 
         assert str(e.value) == "Only OS X 10.8 and newer are supported, not 10.7"
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 13),
+    reason="TLS-PSK support requires Python 3.13+",
+)
+def test_psk_client_callback_delegates():
+    context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    callback = mock.Mock()
+
+    with mock.patch.object(context._ctx, "set_psk_client_callback") as set_callback:
+        context.set_psk_client_callback(callback)
+
+    set_callback.assert_called_once_with(callback)
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 13),
+    reason="TLS-PSK support requires Python 3.13+",
+)
+def test_psk_server_callback_delegates():
+    context = truststore.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    callback = mock.Mock()
+
+    with mock.patch.object(context._ctx, "set_psk_server_callback") as set_callback:
+        context.set_psk_server_callback(callback, "test-hint")
+
+    set_callback.assert_called_once_with(callback, "test-hint")

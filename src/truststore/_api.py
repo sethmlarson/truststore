@@ -193,6 +193,23 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
     def get_ciphers(self) -> typing.Any:
         return self._ctx.get_ciphers()
 
+    if sys.version_info >= (3, 13):
+
+        def set_psk_client_callback(
+            self,
+            callback: typing.Callable[[str | None], tuple[str | None, bytes]] | None,
+        ) -> None:
+            """Set the TLS-PSK client callback."""
+            return self._ctx.set_psk_client_callback(callback)
+
+        def set_psk_server_callback(
+            self,
+            callback: typing.Callable[[str | None], bytes] | None,
+            identity_hint: str | None = None,
+        ) -> None:
+            """Set the TLS-PSK server callback."""
+            return self._ctx.set_psk_server_callback(callback, identity_hint)
+
     def session_stats(self) -> dict[str, int]:
         return self._ctx.session_stats()
 
