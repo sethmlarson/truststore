@@ -17,6 +17,7 @@ import urllib3.exceptions
 from pytest_httpserver import HTTPServer
 
 import truststore
+import truststore._api as api
 from tests import SSLContextAdapter
 from tests.conftest import decorator_requires_internet
 
@@ -452,3 +453,29 @@ def test_macos_10_7_import_error():
             importlib.reload(truststore._macos)
 
         assert str(e.value) == "Only OS X 10.8 and newer are supported, not 10.7"
+
+
+@pytest.mark.parametrize("empty_value", [None, []])
+def test_verify_peercerts_no_cert_chain_raises(monkeypatch, empty_value):
+    # Simulate no certs returned from peer
+    monkeypatch.setattr(api, "_get_unverified_chain_bytes", lambda sslobj: empty_value)
+
+    # Track whether impl gets called (it shouldn't)
+    called = False
+
+    def fake_impl(*args, **kwargs):
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(api, "_verify_peercerts_impl", fake_impl)
+
+    class DummySSLObject:
+        def __init__(self):
+            self.context = object()
+
+    sslobj = DummySSLObject()
+
+    with pytest.raises(ssl.SSLCertVerificationError, match="Peer sent no certificates"):
+        api._verify_peercerts(sslobj, server_hostname="example.com")
+
+    assert called is False

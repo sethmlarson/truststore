@@ -341,6 +341,12 @@ def _verify_peercerts(
         pass
 
     cert_bytes = _get_unverified_chain_bytes(sslobj)
+
+    # If the peer didn't send any certificates then
+    # we can't do verification. Raise an error.
+    if not cert_bytes:
+        raise ssl.SSLCertVerificationError("Peer sent no certificates to verify")
+
     _verify_peercerts_impl(
         sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
     )

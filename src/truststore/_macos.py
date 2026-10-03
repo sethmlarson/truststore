@@ -382,7 +382,8 @@ def _verify_peercerts_impl(
     cert_chain: list[bytes],
     server_hostname: str | None = None,
 ) -> None:
-    certs = None
+    """Verify the cert_chain from the server using macOS APIs."""
+
     policies = None
     trust = None
     try:
