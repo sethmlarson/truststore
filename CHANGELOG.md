@@ -1,3 +1,8 @@
+# Unreleased
+
+* Fixed a `RecursionError` on CPython when gevent patches SSL before importing
+  truststore, including certificate verification on macOS and Windows.
+
 # 0.10.4
 
 * Fixed a thread-safety issue when configuring the internal `ssl.SSLContext` object.
