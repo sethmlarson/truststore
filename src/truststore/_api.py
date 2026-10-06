@@ -97,7 +97,31 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
                 _verify_peercerts(self, server_hostname=self.server_hostname)
                 return ret
 
+        class TruststoreSSLSocket(ssl.SSLSocket):
+            # wrap_socket() before connect() does not handshake. When that
+            # happens, do_handshake() (usually from connect()) has to disable
+            # OpenSSL verification for the handshake and then run the OS check,
+            # matching the order wrap_socket() uses for an already-connected socket.
+            _truststore_defer_verify: bool
+            _truststore_ctx_lock: threading.Lock
+
+            def do_handshake(self, block: bool = False) -> None:
+                if not getattr(self, "_truststore_defer_verify", False):
+                    super().do_handshake(block)
+                    return
+
+                with contextlib.ExitStack() as stack:
+                    with self._truststore_ctx_lock:
+                        stack.enter_context(_configure_context(self.context))
+                    super().do_handshake(block)
+                try:
+                    _verify_peercerts(self, server_hostname=self.server_hostname)
+                except Exception:
+                    self.close()
+                    raise
+
         self._ctx.sslobject_class = TruststoreSSLObject
+        self._ctx.sslsocket_class = TruststoreSSLSocket
 
     def wrap_socket(
         self,
@@ -124,6 +148,13 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
                 suppress_ragged_eofs=suppress_ragged_eofs,
                 session=session,
             )
+        # Not connected yet, or connected with do_handshake_on_connect=False:
+        # there is no peer certificate. Verifying here raises AttributeError
+        # (issue #210). Defer to TruststoreSSLSocket.do_handshake().
+        if not server_side and not _client_handshake_complete(ssl_sock):
+            setattr(ssl_sock, "_truststore_defer_verify", True)
+            setattr(ssl_sock, "_truststore_ctx_lock", self._ctx_lock)
+            return ssl_sock
         try:
             _verify_peercerts(ssl_sock, server_hostname=server_hostname)
         except Exception:
@@ -324,6 +355,19 @@ else:
     def _get_unverified_chain_bytes(sslobj: ssl.SSLObject) -> list[bytes]:
         unverified_chain = sslobj.get_unverified_chain() or ()  # type: ignore[attr-defined]
         return [cert.public_bytes(_ssl.ENCODING_DER) for cert in unverified_chain]
+
+
+def _client_handshake_complete(ssl_sock: ssl.SSLSocket) -> bool:
+    """True when wrap_socket() already finished the TLS handshake."""
+    sslobj = getattr(ssl_sock, "_sslobj", None)
+    if sslobj is None:
+        return False
+    try:
+        sslobj.getpeercert()
+    except ValueError:
+        # Handshake has not run yet (do_handshake_on_connect=False).
+        return False
+    return True
 
 
 def _verify_peercerts(
