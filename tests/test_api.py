@@ -4,6 +4,8 @@ import platform
 import socket
 import ssl
 import tempfile
+import typing
+import warnings
 from dataclasses import dataclass
 from operator import attrgetter
 from unittest import mock
@@ -303,6 +305,26 @@ def test_sslcontext_api_success(host):
 
 
 @successful_hosts
+def test_urllib3_warnings(host):
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
+        with warnings.catch_warnings(record=True) as w:
+            http.request("GET", f"https://{host}")
+        assert w == []
+
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
+        with warnings.catch_warnings(record=True) as w:
+            http.request("GET", f"https://{host}")
+        assert w and any(
+            wn.category == urllib3.exceptions.InsecureRequestWarning for wn in w
+        )
+
+
+@successful_hosts
 @pytest.mark.filterwarnings("ignore:enable_cleanup_closed ignored.*:DeprecationWarning")
 @pytest.mark.asyncio
 async def test_sslcontext_api_success_async(host):
@@ -460,7 +482,7 @@ def test_verify_peercerts_no_cert_chain_raises(monkeypatch, empty_value):
     # Simulate no certs returned from peer
     monkeypatch.setattr(api, "_get_unverified_chain_bytes", lambda sslobj: empty_value)
 
-    # Track whether impl gets called (it shouldn't)
+    # Track whether _verify_peercerts_impl() is called.
     called = False
 
     def fake_impl(*args, **kwargs):
@@ -479,3 +501,35 @@ def test_verify_peercerts_no_cert_chain_raises(monkeypatch, empty_value):
         api._verify_peercerts(sslobj, server_hostname="example.com")
 
     assert called is False
+
+
+empty_server_hostname_kwargs = pytest.mark.parametrize(
+    "server_hostname_kwargs", [{}, {"server_hostname": None}, {"server_hostname": ""}]
+)
+
+
+@empty_server_hostname_kwargs
+def test_wrap_socket_server_hostname_validation(
+    server_hostname_kwargs: dict[str, typing.Any],
+) -> None:
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = True
+    sock = mock.Mock()
+
+    with pytest.raises(ValueError) as e:
+        ctx.wrap_socket(sock, **server_hostname_kwargs)
+    assert str(e.value) == "check_hostname requires server_hostname"
+
+
+@empty_server_hostname_kwargs
+def test_wrap_bio_server_hostname_validation(
+    server_hostname_kwargs: dict[str, typing.Any],
+) -> None:
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = True
+    incoming, outgoing = ssl.MemoryBIO(), ssl.MemoryBIO()
+
+    with pytest.raises(ValueError) as e:
+        ctx.wrap_bio(incoming, outgoing, **server_hostname_kwargs)
+    assert str(e.value) == "check_hostname requires server_hostname"
+
