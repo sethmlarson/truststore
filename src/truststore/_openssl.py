@@ -42,22 +42,22 @@ def _configure_context(ctx: ssl.SSLContext) -> typing.Iterator[None]:
         ctx.set_default_verify_paths()
     else:
         # cafile from OpenSSL doesn't exist and capath from OpenSSL doesn't
-        # contain certs. If the path is a directory, load a the PEM files in
+        # contain certs. If the path is a directory, load the PEM files in
         # that directory; if it's a single file, load it as a file.
-        for cafile in _CA_FILE_CANDIDATES:
-            if os.path.isdir(cafile):
-                cadata = load_cadata(cafile)
+        for cafile_or_cadir in _CA_FILE_CANDIDATES:
+            if os.path.isdir(cafile_or_cadir):
+                cadata = load_cadir_to_cadata(cafile_or_cadir)
                 if cadata:
                     ctx.load_verify_locations(cadata=cadata)
                     break
-            elif os.path.isfile(cafile):
-                ctx.load_verify_locations(cafile=cafile)
+            elif os.path.isfile(cafile_or_cadir):
+                ctx.load_verify_locations(cafile=cafile_or_cadir)
                 break
 
     yield
 
 
-def load_cadata(cadir: str) -> str | None:
+def load_cadir_to_cadata(cadir: str) -> str | None:
     """Load the CA certificates in a directory by constructing a single PEM
     string.
 
