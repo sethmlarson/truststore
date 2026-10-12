@@ -6,7 +6,6 @@ import ssl
 import tempfile
 import typing
 import warnings
-
 from dataclasses import dataclass
 from operator import attrgetter
 from unittest import mock
