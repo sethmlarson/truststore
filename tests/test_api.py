@@ -5,6 +5,8 @@ import socket
 import ssl
 import sys
 import tempfile
+import typing
+import warnings
 from dataclasses import dataclass
 from operator import attrgetter
 from unittest import mock
@@ -303,6 +305,26 @@ def test_sslcontext_api_success(host):
 
 
 @successful_hosts
+def test_urllib3_warnings(host):
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
+        with warnings.catch_warnings(record=True) as w:
+            http.request("GET", f"https://{host}")
+        assert w == []
+
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
+        with warnings.catch_warnings(record=True) as w:
+            http.request("GET", f"https://{host}")
+        assert w and any(
+            wn.category == urllib3.exceptions.InsecureRequestWarning for wn in w
+        )
+
+
+@successful_hosts
 @pytest.mark.filterwarnings("ignore:enable_cleanup_closed ignored.*:DeprecationWarning")
 @pytest.mark.asyncio
 async def test_sslcontext_api_success_async(host):
@@ -481,3 +503,34 @@ def test_psk_server_callback_delegates():
         context.set_psk_server_callback(callback, "test-hint")
 
     set_callback.assert_called_once_with(callback, "test-hint")
+
+
+empty_server_hostname_kwargs = pytest.mark.parametrize(
+    "server_hostname_kwargs", [{}, {"server_hostname": None}, {"server_hostname": ""}]
+)
+
+
+@empty_server_hostname_kwargs
+def test_wrap_socket_server_hostname_validation(
+    server_hostname_kwargs: dict[str, typing.Any],
+) -> None:
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = True
+    sock = mock.Mock()
+
+    with pytest.raises(ValueError) as e:
+        ctx.wrap_socket(sock, **server_hostname_kwargs)
+    assert str(e.value) == "check_hostname requires server_hostname"
+
+
+@empty_server_hostname_kwargs
+def test_wrap_bio_server_hostname_validation(
+    server_hostname_kwargs: dict[str, typing.Any],
+) -> None:
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = True
+    incoming, outgoing = ssl.MemoryBIO(), ssl.MemoryBIO()
+
+    with pytest.raises(ValueError) as e:
+        ctx.wrap_bio(incoming, outgoing, **server_hostname_kwargs)
+    assert str(e.value) == "check_hostname requires server_hostname"
