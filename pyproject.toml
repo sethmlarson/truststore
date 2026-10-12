@@ -39,6 +39,7 @@ asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
   "error",
+  "default::urllib3.exceptions.InsecureRequestWarning",
   # See: aio-libs/aiohttp#7545
   "ignore:.*datetime.utcfromtimestamp().*:DeprecationWarning",
 ]
