@@ -4,7 +4,9 @@ import platform
 import socket
 import ssl
 import tempfile
+import typing
 import warnings
+
 from dataclasses import dataclass
 from operator import attrgetter
 from unittest import mock
@@ -473,3 +475,34 @@ def test_macos_10_7_import_error():
             importlib.reload(truststore._macos)
 
         assert str(e.value) == "Only OS X 10.8 and newer are supported, not 10.7"
+
+
+empty_server_hostname_kwargs = pytest.mark.parametrize(
+    "server_hostname_kwargs", [{}, {"server_hostname": None}, {"server_hostname": ""}]
+)
+
+
+@empty_server_hostname_kwargs
+def test_wrap_socket_server_hostname_validation(
+    server_hostname_kwargs: dict[str, typing.Any],
+) -> None:
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = True
+    sock = mock.Mock()
+
+    with pytest.raises(ValueError) as e:
+        ctx.wrap_socket(sock, **server_hostname_kwargs)
+    assert str(e.value) == "check_hostname requires server_hostname"
+
+
+@empty_server_hostname_kwargs
+def test_wrap_bio_server_hostname_validation(
+    server_hostname_kwargs: dict[str, typing.Any],
+) -> None:
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = True
+    incoming, outgoing = ssl.MemoryBIO(), ssl.MemoryBIO()
+
+    with pytest.raises(ValueError) as e:
+        ctx.wrap_bio(incoming, outgoing, **server_hostname_kwargs)
+    assert str(e.value) == "check_hostname requires server_hostname"

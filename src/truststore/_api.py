@@ -126,6 +126,9 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         server_hostname: str | None = None,
         session: ssl.SSLSession | None = None,
     ) -> ssl.SSLSocket:
+        if self.check_hostname and not server_hostname:
+            raise ValueError("check_hostname requires server_hostname")
+
         with self._ctx_lock:
             with _configure_context(self._ctx):
                 ssl_sock = self._ctx.wrap_socket(
@@ -160,6 +163,9 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         server_hostname: str | None = None,
         session: ssl.SSLSession | None = None,
     ) -> ssl.SSLObject:
+        if self.check_hostname and not server_hostname:
+            raise ValueError("check_hostname requires server_hostname")
+
         # We need to lock around the .__enter__()
         # but we don't need to lock within the
         # context manager, so we need to expand the
@@ -355,6 +361,9 @@ def _verify_peercerts(
     Verifies the peer certificates from an SSLSocket or SSLObject
     against the certificates in the OS trust store.
     """
+    if sock_or_sslobj.context.check_hostname and not server_hostname:
+        raise ValueError("check_hostname requires server_hostname")
+
     sslobj: ssl.SSLObject = sock_or_sslobj  # type: ignore[assignment]
     try:
         while not hasattr(sslobj, "get_unverified_chain"):
