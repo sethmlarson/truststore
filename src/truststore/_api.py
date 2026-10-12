@@ -88,6 +88,7 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         self._ctx_lock = threading.Lock()
         self._configure_count = 0
         self._configure_stack: contextlib.ExitStack | None = None
+        self._strict_policy: _VerifyPolicy | None = None
 
         class TruststoreSSLObject(ssl.SSLObject):
             # This object exists because wrap_bio() doesn't
@@ -96,13 +97,17 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
 
             def do_handshake(self) -> None:
                 ret = super().do_handshake()
-                _verify_peercerts(self, server_hostname=self.server_hostname)
+                _verify_peercerts(
+                    self,
+                    server_hostname=self.server_hostname,
+                    policy=getattr(self, "_truststore_policy", None),
+                )
                 return ret
 
         self._ctx.sslobject_class = TruststoreSSLObject
 
     @contextlib.contextmanager
-    def _configured_ctx(self) -> typing.Iterator[None]:
+    def _configured_ctx(self) -> typing.Iterator["_VerifyPolicy"]:
         # _configure_context() saves the context's verification settings, relaxes
         # them and restores them on exit. When several threads use the same context
         # at once, a thread entering while another one is inside would save the
@@ -110,20 +115,35 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         # context without verification. So the context is configured once, by the
         # first thread to enter, and restored once, by the last thread to leave,
         # each time while holding the lock.
+        #
+        # While the context is relaxed, its verify_mode and check_hostname no longer
+        # describe what the caller asked for, and the peer certificates are verified
+        # from those settings. So the strict settings are recorded when the context
+        # is configured and handed to each caller, which verifies with them.
         with self._ctx_lock:
             if self._configure_count == 0:
+                self._strict_policy = _VerifyPolicy(
+                    self._ctx.check_hostname, self._ctx.verify_mode
+                )
                 stack = contextlib.ExitStack()
-                stack.enter_context(_configure_context(self._ctx))
+                try:
+                    stack.enter_context(_configure_context(self._ctx))
+                except BaseException:
+                    self._strict_policy = None
+                    raise
                 self._configure_stack = stack
             self._configure_count += 1
+            policy = self._strict_policy
+            assert policy is not None
         try:
-            yield
+            yield policy
         finally:
             with self._ctx_lock:
                 self._configure_count -= 1
                 if self._configure_count == 0:
                     stack = self._configure_stack
                     self._configure_stack = None
+                    self._strict_policy = None
                     assert stack is not None
                     stack.close()
 
@@ -136,7 +156,7 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         server_hostname: str | None = None,
         session: ssl.SSLSession | None = None,
     ) -> ssl.SSLSocket:
-        with self._configured_ctx():
+        with self._configured_ctx() as policy:
             ssl_sock = self._ctx.wrap_socket(
                 sock,
                 server_side=server_side,
@@ -146,7 +166,7 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
                 session=session,
             )
         try:
-            _verify_peercerts(ssl_sock, server_hostname=server_hostname)
+            _verify_peercerts(ssl_sock, server_hostname=server_hostname, policy=policy)
         except Exception:
             ssl_sock.close()
             raise
@@ -160,7 +180,7 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         server_hostname: str | None = None,
         session: ssl.SSLSession | None = None,
     ) -> ssl.SSLObject:
-        with self._configured_ctx():
+        with self._configured_ctx() as policy:
             ssl_obj = self._ctx.wrap_bio(
                 incoming,
                 outgoing,
@@ -168,6 +188,9 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
                 server_side=server_side,
                 session=session,
             )
+            # do_handshake() verifies later, possibly while another wrap has
+            # the context relaxed, so keep the settings in force now
+            ssl_obj._truststore_policy = policy  # type: ignore[attr-defined]
         return ssl_obj
 
     def load_verify_locations(
@@ -340,8 +363,29 @@ else:
         return [cert.public_bytes(_ssl.ENCODING_DER) for cert in unverified_chain]
 
 
+class _VerifyPolicy(typing.NamedTuple):
+    check_hostname: bool
+    verify_mode: ssl.VerifyMode
+
+
+class _PolicyContext:
+    """The wrapped ssl.SSLContext, seen with the verification settings that
+    were in force when the connection was wrapped and not the relaxed ones that
+    another connection may have put in place since."""
+
+    def __init__(self, ctx: ssl.SSLContext, policy: _VerifyPolicy) -> None:
+        self._ctx = ctx
+        self.check_hostname = policy.check_hostname
+        self.verify_mode = policy.verify_mode
+
+    def __getattr__(self, name: str) -> typing.Any:
+        return getattr(self._ctx, name)
+
+
 def _verify_peercerts(
-    sock_or_sslobj: ssl.SSLSocket | ssl.SSLObject, server_hostname: str | None
+    sock_or_sslobj: ssl.SSLSocket | ssl.SSLObject,
+    server_hostname: str | None,
+    policy: _VerifyPolicy | None = None,
 ) -> None:
     """
     Verifies the peer certificates from an SSLSocket or SSLObject
@@ -355,6 +399,7 @@ def _verify_peercerts(
         pass
 
     cert_bytes = _get_unverified_chain_bytes(sslobj)
-    _verify_peercerts_impl(
-        sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
-    )
+    ctx: typing.Any = sock_or_sslobj.context
+    if policy is not None:
+        ctx = _PolicyContext(ctx, policy)
+    _verify_peercerts_impl(ctx, cert_bytes, server_hostname=server_hostname)
