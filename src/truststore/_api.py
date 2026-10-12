@@ -86,6 +86,8 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
     def __init__(self, protocol: int = None) -> None:  # type: ignore[assignment]
         self._ctx = _original_SSLContext(protocol)
         self._ctx_lock = threading.Lock()
+        self._configure_count = 0
+        self._configure_stack: contextlib.ExitStack | None = None
 
         class TruststoreSSLObject(ssl.SSLObject):
             # This object exists because wrap_bio() doesn't
@@ -99,6 +101,32 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
 
         self._ctx.sslobject_class = TruststoreSSLObject
 
+    @contextlib.contextmanager
+    def _configured_ctx(self) -> typing.Iterator[None]:
+        # _configure_context() saves the context's verification settings, relaxes
+        # them and restores them on exit. When several threads use the same context
+        # at once, a thread entering while another one is inside would save the
+        # relaxed values as the "original" ones and restore them last, leaving the
+        # context without verification. So the context is configured once, by the
+        # first thread to enter, and restored once, by the last thread to leave,
+        # each time while holding the lock.
+        with self._ctx_lock:
+            if self._configure_count == 0:
+                stack = contextlib.ExitStack()
+                stack.enter_context(_configure_context(self._ctx))
+                self._configure_stack = stack
+            self._configure_count += 1
+        try:
+            yield
+        finally:
+            with self._ctx_lock:
+                self._configure_count -= 1
+                if self._configure_count == 0:
+                    stack = self._configure_stack
+                    self._configure_stack = None
+                    assert stack is not None
+                    stack.close()
+
     def wrap_socket(
         self,
         sock: socket.socket,
@@ -108,14 +136,7 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         server_hostname: str | None = None,
         session: ssl.SSLSession | None = None,
     ) -> ssl.SSLSocket:
-        # We need to lock around the .__enter__()
-        # but we don't need to lock within the
-        # context manager, so we need to expand the
-        # syntactic sugar of the `with` statement.
-        with contextlib.ExitStack() as stack:
-            with self._ctx_lock:
-                stack.enter_context(_configure_context(self._ctx))
-
+        with self._configured_ctx():
             ssl_sock = self._ctx.wrap_socket(
                 sock,
                 server_side=server_side,
@@ -139,14 +160,7 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         server_hostname: str | None = None,
         session: ssl.SSLSession | None = None,
     ) -> ssl.SSLObject:
-        # We need to lock around the .__enter__()
-        # but we don't need to lock within the
-        # context manager, so we need to expand the
-        # syntactic sugar of the `with` statement.
-        with contextlib.ExitStack() as stack:
-            with self._ctx_lock:
-                stack.enter_context(_configure_context(self._ctx))
-
+        with self._configured_ctx():
             ssl_obj = self._ctx.wrap_bio(
                 incoming,
                 outgoing,

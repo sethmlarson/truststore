@@ -86,3 +86,91 @@ def test_threading_wrap_bio():
         t.start()
     for t in threads:
         t.join()
+
+
+class _PausingContext:
+    """Stands in for the wrapped ssl.SSLContext and makes wrap_bio() wait,
+    so that threads can be held inside the configured section."""
+
+    def __init__(self, real, entered, release):
+        self._real = real
+        self._entered = entered
+        self._release = release
+
+    def __getattr__(self, name):
+        return getattr(self._real, name)
+
+    def wrap_bio(self, *args, **kwargs):
+        self._entered[threading.current_thread().name].set()
+        assert self._release[threading.current_thread().name].wait(10)
+
+
+def test_overlapping_threads_restore_the_verification_settings(monkeypatch):
+    """Two threads inside wrap_bio() at once must not leave the shared context
+    with its verification relaxed. _configure_context() is replaced by a copy of
+    the macOS and Windows one, which relaxes the settings and restores what it
+    saved."""
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    real = ctx._ctx
+    assert real.verify_mode == ssl.CERT_REQUIRED
+    assert real.check_hostname
+
+    @contextlib.contextmanager
+    def relax_and_restore(_):
+        check_hostname = real.check_hostname
+        verify_mode = real.verify_mode
+        real.check_hostname = False
+        real.verify_mode = ssl.CERT_NONE
+        try:
+            yield
+        finally:
+            real.check_hostname = check_hostname
+            real.verify_mode = verify_mode
+
+    monkeypatch.setattr(_api, "_configure_context", relax_and_restore)
+    names = ("first", "second")
+    entered = {name: threading.Event() for name in names}
+    release = {name: threading.Event() for name in names}
+    ctx._ctx = _PausingContext(real, entered, release)
+
+    def call():
+        ctx.wrap_bio(ssl.MemoryBIO(), ssl.MemoryBIO(), server_hostname="localhost")
+
+    threads = {name: threading.Thread(target=call, name=name) for name in names}
+    threads["first"].start()
+    assert entered["first"].wait(10)
+    threads["second"].start()
+    assert entered["second"].wait(10)
+
+    # the thread that came first leaves first, then the other one
+    release["first"].set()
+    threads["first"].join(10)
+    release["second"].set()
+    threads["second"].join(10)
+
+    assert real.verify_mode == ssl.CERT_REQUIRED
+    assert real.check_hostname
+
+
+def test_configure_context_is_restored_when_the_last_thread_leaves(monkeypatch):
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    calls = []
+
+    @contextlib.contextmanager
+    def tracking(_):
+        calls.append("enter")
+        try:
+            yield
+        finally:
+            calls.append("exit")
+
+    monkeypatch.setattr(_api, "_configure_context", tracking)
+    with ctx._configured_ctx():
+        with ctx._configured_ctx():
+            assert calls == ["enter"]
+        assert calls == ["enter"]
+    assert calls == ["enter", "exit"]
+
+    with ctx._configured_ctx():
+        pass
+    assert calls == ["enter", "exit", "enter", "exit"]
