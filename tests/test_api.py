@@ -532,4 +532,3 @@ def test_wrap_bio_server_hostname_validation(
     with pytest.raises(ValueError) as e:
         ctx.wrap_bio(incoming, outgoing, **server_hostname_kwargs)
     assert str(e.value) == "check_hostname requires server_hostname"
-
