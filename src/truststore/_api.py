@@ -141,11 +141,11 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
             with self._ctx_lock:
                 self._configure_count -= 1
                 if self._configure_count == 0:
-                    stack = self._configure_stack
+                    to_close = self._configure_stack
                     self._configure_stack = None
                     self._strict_policy = None
-                    assert stack is not None
-                    stack.close()
+                    assert to_close is not None
+                    to_close.close()
 
     def wrap_socket(
         self,
