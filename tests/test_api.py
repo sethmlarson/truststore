@@ -4,6 +4,7 @@ import platform
 import socket
 import ssl
 import tempfile
+import warnings
 from dataclasses import dataclass
 from operator import attrgetter
 from unittest import mock
@@ -299,6 +300,26 @@ def test_sslcontext_api_success(host):
     # that's okay because we only care about the TLS handshake.
     assert resp.status in (200, 403)
     assert len(resp.data) > 0
+
+
+@successful_hosts
+def test_urllib3_warnings(host):
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
+        with warnings.catch_warnings(record=True) as w:
+            http.request("GET", f"https://{host}")
+        assert w == []
+
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
+        with warnings.catch_warnings(record=True) as w:
+            http.request("GET", f"https://{host}")
+        assert w and any(
+            wn.category == urllib3.exceptions.InsecureRequestWarning for wn in w
+        )
 
 
 @successful_hosts
