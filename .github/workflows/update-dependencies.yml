@@ -1,0 +1,71 @@
+name: Update dependencies
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 1 * *"
+
+concurrency:
+  group: update-dependencies
+  cancel-in-progress: false
+
+jobs:
+  update:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    outputs:
+      operation: ${{ steps.update.outputs.pull-request-operation }}
+      branch: ${{ steps.update.outputs.pull-request-branch }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.12.22"
+
+      - name: Update lock files
+        run: |
+          uvx nab==0.0.20 lock --groups dev --output pylock.dev.toml --upgrade
+          uvx nab==0.0.20 lock \
+            --project-mode specific \
+            --project-default-group deploy \
+            --project-dist-policy wheel-only \
+            --project-environment-python 3.13 \
+            --project-environment-platform linux_x86_64 \
+            --project-environment-implementation cpython \
+            --groups deploy \
+            --output .github/workflows/pylock.deploy.toml \
+            --upgrade
+
+      - name: Open dependency update
+        id: update
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          add-paths: |
+            pylock.dev.toml
+            .github/workflows/pylock.deploy.toml
+          branch: dependencies/pylock
+          commit-message: Update locked dependencies
+          delete-branch: true
+          title: Update locked dependencies
+          body: Refreshes the development and deployment locks under the policy in `pyproject.toml`.
+
+  run-ci:
+    needs: update
+    if: needs.update.outputs.operation == 'created' || needs.update.outputs.operation == 'updated'
+    permissions:
+      actions: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run CI for the update
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BRANCH: ${{ needs.update.outputs.branch }}
+        run: gh workflow run ci.yml --ref "$PR_BRANCH"
