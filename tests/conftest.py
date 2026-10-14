@@ -131,10 +131,18 @@ async def mkcert_certs(mkcert: None) -> typing.AsyncIterator[CertFiles]:
 class Server:
     host: str
     port: int
+    _runner: web.AppRunner
+    _closed: bool = False
 
     @property
     def base_url(self) -> str:
         return f"https://{self.host}:{self.port}"
+
+    async def close(self) -> None:
+        """Close the aiohttp runner and its active connections."""
+        if not self._closed:
+            await self._runner.cleanup()
+            self._closed = True
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -166,13 +174,11 @@ async def server(mkcert_certs: CertFiles) -> typing.AsyncIterator[Server]:
     site = web.TCPSite(runner, ssl_context=ctx, port=port)
 
     await site.start()
+    test_server = Server(host="localhost", port=port, _runner=runner)
     try:
-        yield Server(host="localhost", port=port)
+        yield test_server
     finally:
-        await site.stop()
-        # Wait for the server to actually close.
-        await site._server.wait_closed()
-        await runner.cleanup()
+        await test_server.close()
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -198,10 +204,8 @@ async def invalid_server() -> typing.AsyncIterator[Server]:
     site = web.TCPSite(runner, ssl_context=ctx, port=port)
 
     await site.start()
+    test_server = Server(host="localhost", port=port, _runner=runner)
     try:
-        yield Server(host="localhost", port=port)
+        yield test_server
     finally:
-        await site.stop()
-        # Wait for the server to actually close.
-        await site._server.wait_closed()
-        await runner.cleanup()
+        await test_server.close()

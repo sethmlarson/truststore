@@ -1,10 +1,13 @@
 import asyncio
 import concurrent.futures
 import contextlib
+import gc
 import socket
 import ssl
+import sys
 import threading
 import typing
+import warnings
 
 import pytest
 
@@ -43,8 +46,19 @@ async def test_threading(server):
         for t in threads:
             t.join()
 
-    thread = asyncio.to_thread(run_threads)
-    await thread
+    pypy = sys.implementation.name == "pypy"
+    with warnings.catch_warnings():
+        # PyPy reports aiohttp resources after the stress server closes.
+        if pypy:
+            warnings.filterwarnings(
+                "ignore",
+                message=r"unclosed (?:<socket\.socket|transport <_SelectorSocketTransport).*",
+                category=ResourceWarning,
+            )
+        await asyncio.to_thread(run_threads)
+        await server.close()
+        if pypy:
+            gc.collect()
 
 
 def test_wrap_bio_configures_context_under_lock(monkeypatch):
