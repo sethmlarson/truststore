@@ -17,8 +17,29 @@ def test(session):
     session.env["YARL_NO_EXTENSIONS"] = "1"
     session.env["FROZENLIST_NO_EXTENSIONS"] = "1"
 
-    session.install("-rdev-requirements.txt", ".")
-    session.run("pip", "freeze")
+    session.run_install(
+        "python",
+        "-m",
+        "pip",
+        "install",
+        "--upgrade",
+        "--only-binary",
+        ":all:",
+        "pip>=26.2.1",
+    )
+    session.run_install(
+        "python",
+        "-m",
+        "pip",
+        "install",
+        "--only-binary",
+        ":all:",
+        "-r",
+        "pylock.dev.toml",
+    )
+    session.run_install("python", "-m", "pip", "install", "--no-deps", "-e", ".")
+
+    session.run("python", "-m", "pip", "freeze")
     session.run(
         "pytest",
         "-v",
