@@ -306,9 +306,11 @@ def test_sslcontext_api_success(host):
 
 @successful_hosts
 def test_urllib3_warnings(host):
+    # Capture urllib3 warnings to compare verified and unverified requests.
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
         with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
             http.request("GET", f"https://{host}")
         assert w == []
 
@@ -318,6 +320,7 @@ def test_urllib3_warnings(host):
 
     with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
         with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
             http.request("GET", f"https://{host}")
         assert w and any(
             wn.category == urllib3.exceptions.InsecureRequestWarning for wn in w
