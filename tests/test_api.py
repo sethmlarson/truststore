@@ -183,14 +183,14 @@ if platform.system() == "Darwin" and tuple(
 
 
 @pytest.fixture
-def trustme_ca():
+def trustme_ca(request):
     # 'trustme' is optional to allow testing on Python 3.13
     try:
         import trustme
     except ImportError:
         pytest.skip("Test requires 'trustme' to be installed")
 
-    ca = trustme.CA()
+    ca = trustme.CA(**getattr(request, "param", {}))
     yield ca
 
 
@@ -429,6 +429,18 @@ def test_trustme_cert(trustme_ca, httpserver):
     assert len(resp.data) > 0
 
 
+# This subject produces a certificate hash with a leading zero.
+@pytest.mark.parametrize(
+    "trustme_ca",
+    [
+        {
+            "organization_name": "truststore capath 15",
+            "organization_unit_name": "unit 15",
+        }
+    ],
+    ids=["leading-zero-hash"],
+    indirect=True,
+)
 def test_trustme_cert_loaded_via_capath(trustme_ca, httpserver):
     from OpenSSL.crypto import X509
 
@@ -437,8 +449,9 @@ def test_trustme_cert_loaded_via_capath(trustme_ca, httpserver):
         with open(f"{capath}/cert.pem", "wb") as certfile:
             certfile.write(trustme_ca.cert_pem.bytes())
         cert_hash = X509.from_cryptography(trustme_ca._certificate).subject_name_hash()
-        os.symlink(f"{capath}/cert.pem", f"{capath}/{cert_hash:x}.0")
-        assert set(os.listdir(capath)) == {"cert.pem", f"{cert_hash:x}.0"}
+        cert_filename = f"{cert_hash:08x}.0"
+        os.symlink(f"{capath}/cert.pem", f"{capath}/{cert_filename}")
+        assert set(os.listdir(capath)) == {"cert.pem", cert_filename}
 
         ctx.load_verify_locations(capath=capath)
 
