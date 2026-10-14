@@ -53,18 +53,22 @@ your program as modules that have already imported `ssl.SSLContext` won't be aff
 
 ```python
 import truststore
+
 truststore.inject_into_ssl()
 
 # Automatically works with urllib3, requests, aiohttp, and more:
 import urllib3
+
 http = urllib3.PoolManager()
 resp = http.request("GET", "https://example.com")
 
 import aiohttp
+
 http = aiohttp.ClientSession()
 resp = await http.request("GET", "https://example.com")
 
 import requests
+
 resp = requests.get("https://example.com")
 ```
 
@@ -78,6 +82,7 @@ import truststore
 ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
 import urllib3
+
 http = urllib3.PoolManager(ssl_context=ctx)
 resp = http.request("GET", "https://example.com")
 ```
