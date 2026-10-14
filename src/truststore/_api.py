@@ -80,7 +80,7 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         # when using non-CPython implementations.
         return _truststore_SSLContext_dunder_class or SSLContext
 
-    def __init__(self, protocol: int = None) -> None:  # type: ignore[assignment]
+    def __init__(self, protocol: int | None = None) -> None:
         self._ctx = _original_SSLContext(protocol)
         self._ctx_lock = threading.RLock()
 
