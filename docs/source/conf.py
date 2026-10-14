@@ -4,7 +4,7 @@ import truststore
 
 project = "Truststore"
 author = "Seth Michael Larson, David Glick"
-copyright = f"{datetime.date.today().year}"
+copyright = f"{datetime.datetime.now(tz=datetime.timezone.utc).year}"
 release = version = truststore.__version__
 
 extensions = [
