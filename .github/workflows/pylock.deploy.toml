@@ -1,0 +1,123 @@
+lock-version = "1.0"
+environments = [
+    "python_version == \"3.13\" and sys_platform == \"linux\" and platform_machine == \"x86_64\" and os_name == \"posix\"",
+]
+requires-python = ">=3.10"
+dependency-groups = [
+    "build-system",
+    "deploy",
+    "runtime",
+]
+default-groups = [
+    "build-system",
+    "deploy",
+]
+created-by = "nab"
+
+[[packages]]
+name = "build"
+version = "1.6.1"
+marker = "\"deploy\" in dependency_groups"
+requires-python = ">=3.10"
+dependencies = [
+    { name = "packaging" },
+    { name = "pyproject-hooks" },
+]
+index = "https://pypi.org/simple/"
+
+[[packages.wheels]]
+name = "build-1.6.1-py3-none-any.whl"
+upload-time = 2026-09-10 07:55:59.148398+00:00
+url = "https://files.pythonhosted.org/packages/ad/9b/9fb3585dabcd73a1b2a6267f63f62649347c9e6d072c9fde365b105abb2c/build-1.6.1-py3-none-any.whl"
+size = 31179
+
+[packages.wheels.hashes]
+sha256 = "ecd351a4be9d35a9eaaba244a7687143c9c7d4aea6ac964e7e7ddab20cbcf4e7"
+
+[[packages]]
+name = "flit-core"
+version = "4.1.0"
+marker = "\"build-system\" in dependency_groups"
+requires-python = ">=3.8"
+index = "https://pypi.org/simple/"
+
+[[packages.wheels]]
+name = "flit_core-4.1.0-py3-none-any.whl"
+upload-time = 2026-09-16 10:46:56.119962+00:00
+url = "https://files.pythonhosted.org/packages/38/2a/8ea4bd54734f0fcbb507c28cb6b79d72f528e40498178a01cb35fc5d686f/flit_core-4.1.0-py3-none-any.whl"
+size = 45622
+
+[packages.wheels.hashes]
+sha256 = "17398cdd2c38b24047a5a9c93089ec5c0bf12ec3d1469bbf69c27ed7965299db"
+
+[[packages]]
+name = "packaging"
+version = "26.3"
+marker = "\"deploy\" in dependency_groups"
+requires-python = ">=3.9"
+index = "https://pypi.org/simple/"
+
+[[packages.wheels]]
+name = "packaging-26.3-py3-none-any.whl"
+upload-time = 2026-08-04 18:15:27.159957+00:00
+url = "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl"
+size = 129956
+
+[packages.wheels.hashes]
+sha256 = "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
+
+[[packages]]
+name = "pyproject-hooks"
+version = "1.3.3"
+marker = "\"deploy\" in dependency_groups"
+requires-python = ">=3.8"
+index = "https://pypi.org/simple/"
+
+[[packages.wheels]]
+name = "pyproject_hooks-1.3.3-py3-none-any.whl"
+upload-time = 2026-09-16 08:58:02.960279+00:00
+url = "https://files.pythonhosted.org/packages/85/11/044d1ae1b4ec0d7af88ee5bc91e081be1022533032b906a7bdabdbb60977/pyproject_hooks-1.3.3-py3-none-any.whl"
+size = 10724
+
+[packages.wheels.hashes]
+sha256 = "5fc53fdac9f7bd63fbcdc868fb5f90b4784d78a53a3d3388cd738b807441a20b"
+
+[tool.nab]
+nab-version = "0.0.21"
+created-at = 2026-10-14 18:33:14.904784+00:00
+command-line = [
+    "nab",
+    "lock",
+    "--project-mode",
+    "specific",
+    "--project-default-group",
+    "deploy",
+    "--project-default-group",
+    "build-system",
+    "--project-base-group",
+    "runtime",
+    "--project-build-group",
+    "build-system",
+    "--project-environment-python",
+    "3.13",
+    "--project-environment-platform",
+    "linux_x86_64",
+    "--project-environment-implementation",
+    "cpython",
+    "--groups",
+    "deploy",
+    "--output",
+    ".github/workflows/pylock.deploy.toml",
+]
+input-path = "pyproject.toml"
+mode = "specific"
+python-specifier = ">= 3.10"
+cli-project-overrides = [
+    "--project-mode=specific",
+    "--project-default-group=deploy, build-system",
+    "--project-base-group=runtime",
+    "--project-build-group=build-system",
+    "--project-environment-python=3.13",
+    "--project-environment-platform=linux_x86_64",
+    "--project-environment-implementation=cpython",
+]
