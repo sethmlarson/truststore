@@ -6,8 +6,9 @@ on:
       - main
   pull_request:
   workflow_dispatch:
-  schedule:
-    - cron: "7 5 * * *"
+
+permissions:
+  contents: read
 
 defaults:
   run:
@@ -21,42 +22,64 @@ jobs:
     runs-on: ubuntu-latest
     name: "Lint"
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: 3.x
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.x"
       - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
   test:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, windows-latest, ubuntu-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15", "pypy3.12"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
+        include:
+          # Oldest available patches catch regressions hidden by later patch releases.
+          - os: ubuntu-latest
+            python: {key: "3.10-min", version: "3.10.4"}
+          - os: ubuntu-latest
+            python: {key: "3.11-min", version: "3.11.0"}
+          - os: ubuntu-latest
+            python: {key: "3.12-min", version: "3.12.0"}
+          - os: ubuntu-latest
+            python: {key: "3.13-min", version: "3.13.0"}
+          - os: ubuntu-latest
+            python: {key: "3.14-min", version: "3.14.0"}
+          # Match cryptography's pp73 Linux and pp80 macOS/Windows wheels.
+          - os: ubuntu-latest
+            python: "pypy3.11-v7.3.23"
+          - os: macos-latest
+            python: "pypy3.11-v8.0.0"
+          - os: windows-latest
+            python: "pypy3.11-v8.0.0"
 
     runs-on: ${{ matrix.os }}
-    name: ${{ fromJson('{"macos-14":"macOS","windows-latest":"Windows","ubuntu-latest":"Ubuntu"}')[matrix.os] }} Python ${{ matrix.python-version }}
+    name: ${{ fromJSON('{"macos-latest":"macOS","windows-latest":"Windows","ubuntu-latest":"Ubuntu"}')[matrix.os] }} Python ${{ matrix.python.key || matrix.python }}
     continue-on-error: false
     timeout-minutes: 10
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: ${{ matrix.python-version }}
+          persist-credentials: false
+      - name: Setup Python ${{ matrix.python.version || matrix.python }}
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python.version || matrix.python }}
           allow-prereleases: true
 
       - name: Setup Go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: 1.x
+          cache: false
 
       - name: Install mkcert on macOS
         if: runner.os == 'macOS'
         run: |
           go install filippo.io/mkcert@v1.4.4
-          # for non-interactive install of root CA
-          sudo security authorizationdb write com.apple.trust-settings.admin allow
           mkcert -install
 
       - name: Install mkcert on Linux
@@ -69,21 +92,9 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m pip install nox
-          nox -s test
-
-  compileall:
-    # Run 'python -m compileall' on an old Python version
-    # to ensure that pip can vendor truststore successfully.
-    runs-on: ubuntu-22.04 # pin to 22.04, as with 24.04 Python 3.7 is no longer available
-    name: compileall
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
-        with:
-          python-version: "3.7"
-      - run: |
-          python -m compileall -qq -f src/truststore/
+          python -m pip install --upgrade --only-binary :all: 'pip>=26.2.1'
+          python -m pip install --only-binary :all: nox==2026.8.17
+          python -m nox -s test
 
   integration-pip:
     runs-on: ubuntu-latest
@@ -91,20 +102,22 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: truststore
+          persist-credentials: false
 
       - name: Checkout pypa/pip
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: pypa/pip
           path: pip
+          persist-credentials: false
 
-      - name: Setup Python 3.11
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      - name: Setup Python 3.14
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
       - name: Patch tests to install local copy of truststore
         working-directory: "${{ github.workspace }}/pip"
@@ -114,8 +127,9 @@ jobs:
       - name: Run tests
         working-directory: "${{ github.workspace }}/pip"
         run: |
-          python -m pip install nox
-          nox -s test-3.11 -- \
+          python -m pip install --upgrade --only-binary :all: 'pip>=26.2.1'
+          python -m pip install --only-binary :all: nox==2026.8.17
+          python -m nox -s test-3.14 -- \
             -m integration \
             tests/functional/test_truststore.py
 
