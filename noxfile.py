@@ -25,7 +25,6 @@ def test(session):
         "-s",
         "-rs",
         "--no-flaky-report",
-        "--max-runs=3",
         *(session.posargs or ("tests/",)),
     )
 

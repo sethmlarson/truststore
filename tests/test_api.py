@@ -23,7 +23,7 @@ import truststore
 from tests import SSLContextAdapter
 from tests.conftest import decorator_requires_internet
 
-pytestmark = pytest.mark.flaky
+pytestmark = pytest.mark.flaky(max_runs=10)
 
 # Make sure the httpserver doesn't hang
 # if the client drops the connection due to a cert verification error
