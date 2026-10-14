@@ -1,5 +1,4 @@
 import os
-import sys
 
 import nox
 
@@ -18,11 +17,6 @@ def test(session):
     session.env["YARL_NO_EXTENSIONS"] = "1"
     session.env["FROZENLIST_NO_EXTENSIONS"] = "1"
 
-    # This would need to be updated if we added PyPy
-    # to our default Python versions above. Right now
-    # PyPy is only used on CI.
-    pypy = session.python is None and sys.implementation.name == "pypy"
-
     session.install("-rdev-requirements.txt", ".")
     session.run("pip", "freeze")
     session.run(
@@ -31,7 +25,6 @@ def test(session):
         "-s",
         "-rs",
         "--no-flaky-report",
-        *(("--config-file=pypy-pytest.ini",) if pypy else ()),
         "--max-runs=3",
         *(session.posargs or ("tests/",)),
     )
