@@ -19,19 +19,16 @@ jobs:
       id-token: write  # Required for Trusted Publishers
     steps:
       - name: "Checkout repository"
-        uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" # v4
+        uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" # v7.0.1
         with:
           persist-credentials: false
       - name: "Setup Python"
         uses: "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" # v7.0.0
         with:
-          python-version: "3.x"
+          python-version: "3.13"
 
       - name: "Build dists"
-        run: |
-          python -m pip install -r .github/workflows/deploy-requirements.txt
-          SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct) \
-          python -m build
+        run: bash .github/scripts/build-dists.sh
 
       - name: "Publish dists to PyPI"
         uses: "pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33" # v1.14.2
