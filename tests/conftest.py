@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 import pytest_asyncio
+import trustme
 from aiohttp import web
 
 MKCERT_CA_NOT_INSTALLED = b"local CA is not installed in the system trust store"
@@ -130,10 +131,18 @@ async def mkcert_certs(mkcert: None) -> typing.AsyncIterator[CertFiles]:
 class Server:
     host: str
     port: int
+    _runner: web.AppRunner
+    _closed: bool = False
 
     @property
     def base_url(self) -> str:
         return f"https://{self.host}:{self.port}"
+
+    async def close(self) -> None:
+        """Close the aiohttp runner and its active connections."""
+        if not self._closed:
+            await self._runner.cleanup()
+            self._closed = True
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -165,10 +174,38 @@ async def server(mkcert_certs: CertFiles) -> typing.AsyncIterator[Server]:
     site = web.TCPSite(runner, ssl_context=ctx, port=port)
 
     await site.start()
+    test_server = Server(host="localhost", port=port, _runner=runner)
     try:
-        yield Server(host="localhost", port=port)
+        yield test_server
     finally:
-        await site.stop()
-        # Wait for the server to actually close.
-        await site._server.wait_closed()
-        await runner.cleanup()
+        await test_server.close()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def invalid_server() -> typing.AsyncIterator[Server]:
+    async def handler(request: web.Request) -> web.Response:
+        # Check the request was served over HTTPS.
+        assert request.scheme == "https"
+
+        return web.Response(status=200)
+
+    app = web.Application()
+    app.add_routes([web.get("/", handler)])
+
+    ctx = original_SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ca = trustme.CA()  # Deliberately not installed in trust store.
+    ca.issue_cert("localhost").configure_cert(ctx)
+
+    # we need keepalive_timeout=0
+    # see https://github.com/aio-libs/aiohttp/issues/5426
+    runner = web.AppRunner(app, keepalive_timeout=0)
+    await runner.setup()
+    port = 9999  # Arbitrary choice.
+    site = web.TCPSite(runner, ssl_context=ctx, port=port)
+
+    await site.start()
+    test_server = Server(host="localhost", port=port, _runner=runner)
+    try:
+        yield test_server
+    finally:
+        await test_server.close()

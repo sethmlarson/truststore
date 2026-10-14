@@ -1,3 +1,10 @@
+# 0.10.5
+
+* Added explicit support for Python 3.15.
+* Added validation for `server_hostname` and `check_hostname` for `wrap_socket()`
+  and `wrap_bio()` in line with `ssl.SSLContext`.
+* Fixed a thread-safety issue for concurrent handshakes on macOS and Windows.
+
 # 0.10.4
 
 * Fixed a thread-safety issue when configuring the internal `ssl.SSLContext` object.

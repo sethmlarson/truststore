@@ -1,5 +1,4 @@
 import _ssl
-import contextlib
 import os
 import platform
 import socket
@@ -34,13 +33,13 @@ def inject_into_ssl() -> None:
     """Injects the :class:`truststore.SSLContext` into the ``ssl``
     module by replacing :class:`ssl.SSLContext`.
     """
-    setattr(ssl, "SSLContext", SSLContext)
+    vars(ssl)["SSLContext"] = SSLContext
     # urllib3 holds on to its own reference of ssl.SSLContext
     # so we need to replace that reference too.
     try:
         import urllib3.util.ssl_ as urllib3_ssl
 
-        setattr(urllib3_ssl, "SSLContext", SSLContext)
+        vars(urllib3_ssl)["SSLContext"] = SSLContext
     except ImportError:
         pass
 
@@ -53,10 +52,8 @@ def inject_into_ssl() -> None:
 
         preloaded_context = getattr(requests.adapters, "_preloaded_ssl_context", None)
         if preloaded_context is not None:
-            setattr(
-                requests.adapters,
-                "_preloaded_ssl_context",
-                SSLContext(ssl.PROTOCOL_TLS_CLIENT),
+            vars(requests.adapters)["_preloaded_ssl_context"] = SSLContext(
+                ssl.PROTOCOL_TLS_CLIENT
             )
     except ImportError:
         pass
@@ -64,11 +61,11 @@ def inject_into_ssl() -> None:
 
 def extract_from_ssl() -> None:
     """Restores the :class:`ssl.SSLContext` class to its original state"""
-    setattr(ssl, "SSLContext", _original_SSLContext)
+    vars(ssl)["SSLContext"] = _original_SSLContext
     try:
         import urllib3.util.ssl_ as urllib3_ssl
 
-        urllib3_ssl.SSLContext = _original_SSLContext
+        vars(urllib3_ssl)["SSLContext"] = _original_SSLContext
     except ImportError:
         pass
 
@@ -83,9 +80,11 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         # when using non-CPython implementations.
         return _truststore_SSLContext_dunder_class or SSLContext
 
-    def __init__(self, protocol: int = None) -> None:  # type: ignore[assignment]
+    def __init__(self, protocol: int | None = None) -> None:
         self._ctx = _original_SSLContext(protocol)
-        self._ctx_lock = threading.Lock()
+        self._ctx_lock = threading.RLock()
+
+        ctx_lock = self._ctx_lock  # Reference used by sslobject/sslsocket classes.
 
         class TruststoreSSLObject(ssl.SSLObject):
             # This object exists because wrap_bio() doesn't
@@ -93,10 +92,27 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
             # certificate verifications after SSLObject.do_handshake()
 
             def do_handshake(self) -> None:
-                ret = super().do_handshake()
-                _verify_peercerts(self, server_hostname=self.server_hostname)
+                with ctx_lock:
+                    ret = super().do_handshake()
+                    _verify_peercerts(self, server_hostname=self.server_hostname)
+                    return ret
+
+        class TruststoreSSLSocket(ssl.SSLSocket):
+            # Handles do_handshake_on_connect=False, explicit do_handshake()
+            # calls, and the handshake that SSLSocket.connect() triggers.
+            # Must never be called inside _configure_context(). wrap_socket()
+            # guarantees this by always wrapping with do_handshake_on_connect=False.
+            def do_handshake(self, block: bool = False) -> None:
+                with ctx_lock:
+                    ret = super().do_handshake(block)
+                    try:
+                        _verify_peercerts(self, server_hostname=self.server_hostname)
+                    except Exception:
+                        self.close()
+                        raise
                 return ret
 
+        self._ctx.sslsocket_class = TruststoreSSLSocket
         self._ctx.sslobject_class = TruststoreSSLObject
 
     def wrap_socket(
@@ -108,27 +124,33 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         server_hostname: str | None = None,
         session: ssl.SSLSession | None = None,
     ) -> ssl.SSLSocket:
-        # We need to lock around the .__enter__()
-        # but we don't need to lock within the
-        # context manager, so we need to expand the
-        # syntactic sugar of the `with` statement.
-        with contextlib.ExitStack() as stack:
-            with self._ctx_lock:
-                stack.enter_context(_configure_context(self._ctx))
+        if self.check_hostname and not server_hostname:
+            raise ValueError("check_hostname requires server_hostname")
 
-            ssl_sock = self._ctx.wrap_socket(
-                sock,
-                server_side=server_side,
-                server_hostname=server_hostname,
-                do_handshake_on_connect=do_handshake_on_connect,
-                suppress_ragged_eofs=suppress_ragged_eofs,
-                session=session,
-            )
-        try:
-            _verify_peercerts(ssl_sock, server_hostname=server_hostname)
-        except Exception:
-            ssl_sock.close()
-            raise
+        with self._ctx_lock:
+            with _configure_context(self._ctx):
+                ssl_sock = self._ctx.wrap_socket(
+                    sock,
+                    server_side=server_side,
+                    server_hostname=server_hostname,
+                    do_handshake_on_connect=do_handshake_on_connect,
+                    suppress_ragged_eofs=suppress_ragged_eofs,
+                    session=session,
+                )
+
+            # NOTE: Below is still inside ctx_lock but not
+            # inside the _configure_context().
+
+            # Indicates that a handshake completed and
+            # we can verify now, otherwise verification
+            # will happen in TruststoreSSLSocket.do_handshake()
+            if ssl_sock.version() is not None:
+                try:
+                    _verify_peercerts(ssl_sock, server_hostname=server_hostname)
+                except Exception:
+                    ssl_sock.close()
+                    raise
+
         return ssl_sock
 
     def wrap_bio(
@@ -139,7 +161,14 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         server_hostname: str | None = None,
         session: ssl.SSLSession | None = None,
     ) -> ssl.SSLObject:
-        with _configure_context(self._ctx):
+        if self.check_hostname and not server_hostname:
+            raise ValueError("check_hostname requires server_hostname")
+
+        # We need to lock around the .__enter__()
+        # but we don't need to lock within the
+        # context manager, so we need to expand the
+        # syntactic sugar of the `with` statement.
+        with self._ctx_lock, _configure_context(self._ctx):
             ssl_obj = self._ctx.wrap_bio(
                 incoming,
                 outgoing,
@@ -186,6 +215,23 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
     def get_ciphers(self) -> typing.Any:
         return self._ctx.get_ciphers()
 
+    if sys.version_info >= (3, 13):
+
+        def set_psk_client_callback(
+            self,
+            callback: typing.Callable[[str | None], tuple[str | None, bytes]] | None,
+        ) -> None:
+            """Set the TLS-PSK client callback."""
+            return self._ctx.set_psk_client_callback(callback)
+
+        def set_psk_server_callback(
+            self,
+            callback: typing.Callable[[str | None], bytes] | None,
+            identity_hint: str | None = None,
+        ) -> None:
+            """Set the TLS-PSK server callback."""
+            return self._ctx.set_psk_server_callback(callback, identity_hint)
+
     def session_stats(self) -> dict[str, int]:
         return self._ctx.session_stats()
 
@@ -211,11 +257,13 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
 
     @property
     def check_hostname(self) -> bool:
-        return self._ctx.check_hostname
+        with self._ctx_lock:
+            return self._ctx.check_hostname
 
     @check_hostname.setter
     def check_hostname(self, value: bool) -> None:
-        self._ctx.check_hostname = value
+        with self._ctx_lock:
+            self._ctx.check_hostname = value
 
     @property
     def hostname_checks_common_name(self) -> bool:
@@ -291,13 +339,15 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
 
     @property
     def verify_mode(self) -> ssl.VerifyMode:
-        return self._ctx.verify_mode
+        with self._ctx_lock:
+            return self._ctx.verify_mode
 
     @verify_mode.setter
     def verify_mode(self, value: ssl.VerifyMode) -> None:
-        _original_super_SSLContext.verify_mode.__set__(  # type: ignore[attr-defined]
-            self._ctx, value
-        )
+        with self._ctx_lock:
+            _original_super_SSLContext.verify_mode.__set__(  # type: ignore[attr-defined]
+                self._ctx, value
+            )
 
 
 # Python 3.13+ makes get_unverified_chain() a public API that only returns DER
@@ -326,6 +376,9 @@ def _verify_peercerts(
     Verifies the peer certificates from an SSLSocket or SSLObject
     against the certificates in the OS trust store.
     """
+    if sock_or_sslobj.context.check_hostname and not server_hostname:
+        raise ValueError("check_hostname requires server_hostname")
+
     sslobj: ssl.SSLObject = sock_or_sslobj  # type: ignore[assignment]
     try:
         while not hasattr(sslobj, "get_unverified_chain"):

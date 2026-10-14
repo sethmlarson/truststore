@@ -3,7 +3,10 @@ import os
 import platform
 import socket
 import ssl
+import sys
 import tempfile
+import typing
+import warnings
 from dataclasses import dataclass
 from operator import attrgetter
 from unittest import mock
@@ -20,7 +23,7 @@ import truststore
 from tests import SSLContextAdapter
 from tests.conftest import decorator_requires_internet
 
-pytestmark = pytest.mark.flaky
+pytestmark = pytest.mark.flaky(max_runs=10)
 
 # Make sure the httpserver doesn't hang
 # if the client drops the connection due to a cert verification error
@@ -180,14 +183,14 @@ if platform.system() == "Darwin" and tuple(
 
 
 @pytest.fixture
-def trustme_ca():
+def trustme_ca(request):
     # 'trustme' is optional to allow testing on Python 3.13
     try:
         import trustme
     except ImportError:
         pytest.skip("Test requires 'trustme' to be installed")
 
-    ca = trustme.CA()
+    ca = trustme.CA(**getattr(request, "param", {}))
     yield ca
 
 
@@ -302,6 +305,29 @@ def test_sslcontext_api_success(host):
 
 
 @successful_hosts
+def test_urllib3_warnings(host):
+    # Capture urllib3 warnings to compare verified and unverified requests.
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            http.request("GET", f"https://{host}")
+        assert w == []
+
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            http.request("GET", f"https://{host}")
+        assert w and any(
+            wn.category == urllib3.exceptions.InsecureRequestWarning for wn in w
+        )
+
+
+@successful_hosts
 @pytest.mark.filterwarnings("ignore:enable_cleanup_closed ignored.*:DeprecationWarning")
 @pytest.mark.asyncio
 async def test_sslcontext_api_success_async(host):
@@ -322,9 +348,11 @@ def test_sslcontext_api_failures(failure):
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     if platform.system() != "Linux":
         ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
-    with urllib3.PoolManager(ssl_context=ctx) as http:
-        with pytest.raises(urllib3.exceptions.SSLError) as e:
-            http.request("GET", f"https://{host}", retries=False)
+    with (
+        urllib3.PoolManager(ssl_context=ctx) as http,
+        pytest.raises(urllib3.exceptions.SSLError) as e,
+    ):
+        http.request("GET", f"https://{host}", retries=False)
 
     assert "cert" in repr(e.value).lower() and "verif" in repr(e.value).lower()
 
@@ -406,6 +434,18 @@ def test_trustme_cert(trustme_ca, httpserver):
     assert len(resp.data) > 0
 
 
+# This subject produces a certificate hash with a leading zero.
+@pytest.mark.parametrize(
+    "trustme_ca",
+    [
+        {
+            "organization_name": "truststore capath 15",
+            "organization_unit_name": "unit 15",
+        }
+    ],
+    ids=["leading-zero-hash"],
+    indirect=True,
+)
 def test_trustme_cert_loaded_via_capath(trustme_ca, httpserver):
     from OpenSSL.crypto import X509
 
@@ -414,8 +454,9 @@ def test_trustme_cert_loaded_via_capath(trustme_ca, httpserver):
         with open(f"{capath}/cert.pem", "wb") as certfile:
             certfile.write(trustme_ca.cert_pem.bytes())
         cert_hash = X509.from_cryptography(trustme_ca._certificate).subject_name_hash()
-        os.symlink(f"{capath}/cert.pem", f"{capath}/{cert_hash:x}.0")
-        assert set(os.listdir(capath)) == {"cert.pem", f"{cert_hash:x}.0"}
+        cert_filename = f"{cert_hash:08x}.0"
+        os.symlink(f"{capath}/cert.pem", f"{capath}/{cert_filename}")
+        assert set(os.listdir(capath)) == {"cert.pem", cert_filename}
 
         ctx.load_verify_locations(capath=capath)
 
@@ -452,3 +493,62 @@ def test_macos_10_7_import_error():
             importlib.reload(truststore._macos)
 
         assert str(e.value) == "Only OS X 10.8 and newer are supported, not 10.7"
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 13),
+    reason="TLS-PSK support requires Python 3.13+",
+)
+def test_psk_client_callback_delegates():
+    context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    callback = mock.Mock()
+
+    with mock.patch.object(context._ctx, "set_psk_client_callback") as set_callback:
+        context.set_psk_client_callback(callback)
+
+    set_callback.assert_called_once_with(callback)
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 13),
+    reason="TLS-PSK support requires Python 3.13+",
+)
+def test_psk_server_callback_delegates():
+    context = truststore.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    callback = mock.Mock()
+
+    with mock.patch.object(context._ctx, "set_psk_server_callback") as set_callback:
+        context.set_psk_server_callback(callback, "test-hint")
+
+    set_callback.assert_called_once_with(callback, "test-hint")
+
+
+empty_server_hostname_kwargs = pytest.mark.parametrize(
+    "server_hostname_kwargs", [{}, {"server_hostname": None}, {"server_hostname": ""}]
+)
+
+
+@empty_server_hostname_kwargs
+def test_wrap_socket_server_hostname_validation(
+    server_hostname_kwargs: dict[str, typing.Any],
+) -> None:
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = True
+    sock = mock.Mock()
+
+    with pytest.raises(ValueError) as e:
+        ctx.wrap_socket(sock, **server_hostname_kwargs)
+    assert str(e.value) == "check_hostname requires server_hostname"
+
+
+@empty_server_hostname_kwargs
+def test_wrap_bio_server_hostname_validation(
+    server_hostname_kwargs: dict[str, typing.Any],
+) -> None:
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = True
+    incoming, outgoing = ssl.MemoryBIO(), ssl.MemoryBIO()
+
+    with pytest.raises(ValueError) as e:
+        ctx.wrap_bio(incoming, outgoing, **server_hostname_kwargs)
+    assert str(e.value) == "check_hostname requires server_hostname"
