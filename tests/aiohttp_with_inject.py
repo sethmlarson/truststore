@@ -7,7 +7,7 @@ import truststore
 
 truststore.inject_into_ssl()
 
-import aiohttp  # noqa: E402
+import aiohttp
 
 
 async def main():

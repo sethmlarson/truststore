@@ -33,13 +33,13 @@ def inject_into_ssl() -> None:
     """Injects the :class:`truststore.SSLContext` into the ``ssl``
     module by replacing :class:`ssl.SSLContext`.
     """
-    setattr(ssl, "SSLContext", SSLContext)
+    vars(ssl)["SSLContext"] = SSLContext
     # urllib3 holds on to its own reference of ssl.SSLContext
     # so we need to replace that reference too.
     try:
         import urllib3.util.ssl_ as urllib3_ssl
 
-        setattr(urllib3_ssl, "SSLContext", SSLContext)
+        vars(urllib3_ssl)["SSLContext"] = SSLContext
     except ImportError:
         pass
 
@@ -52,10 +52,8 @@ def inject_into_ssl() -> None:
 
         preloaded_context = getattr(requests.adapters, "_preloaded_ssl_context", None)
         if preloaded_context is not None:
-            setattr(
-                requests.adapters,
-                "_preloaded_ssl_context",
-                SSLContext(ssl.PROTOCOL_TLS_CLIENT),
+            vars(requests.adapters)["_preloaded_ssl_context"] = SSLContext(
+                ssl.PROTOCOL_TLS_CLIENT
             )
     except ImportError:
         pass
@@ -63,11 +61,11 @@ def inject_into_ssl() -> None:
 
 def extract_from_ssl() -> None:
     """Restores the :class:`ssl.SSLContext` class to its original state"""
-    setattr(ssl, "SSLContext", _original_SSLContext)
+    vars(ssl)["SSLContext"] = _original_SSLContext
     try:
         import urllib3.util.ssl_ as urllib3_ssl
 
-        urllib3_ssl.SSLContext = _original_SSLContext
+        vars(urllib3_ssl)["SSLContext"] = _original_SSLContext
     except ImportError:
         pass
 
@@ -82,7 +80,7 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         # when using non-CPython implementations.
         return _truststore_SSLContext_dunder_class or SSLContext
 
-    def __init__(self, protocol: int = None) -> None:  # type: ignore[assignment]
+    def __init__(self, protocol: int | None = None) -> None:
         self._ctx = _original_SSLContext(protocol)
         self._ctx_lock = threading.RLock()
 
@@ -211,8 +209,8 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
     def set_npn_protocols(self, npn_protocols: typing.Iterable[str]) -> None:
         return self._ctx.set_npn_protocols(npn_protocols)
 
-    def set_ciphers(self, __cipherlist: str) -> None:
-        return self._ctx.set_ciphers(__cipherlist)
+    def set_ciphers(self, cipherlist: str, /) -> None:
+        return self._ctx.set_ciphers(cipherlist)
 
     def get_ciphers(self) -> typing.Any:
         return self._ctx.get_ciphers()
