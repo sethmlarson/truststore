@@ -6,7 +6,7 @@ import truststore
 
 truststore.inject_into_ssl()
 
-import requests  # noqa: E402
+import requests
 
 resp = requests.request("GET", "https://localhost:9999")
 assert resp.status_code == 200

@@ -348,9 +348,11 @@ def test_sslcontext_api_failures(failure):
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     if platform.system() != "Linux":
         ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
-    with urllib3.PoolManager(ssl_context=ctx) as http:
-        with pytest.raises(urllib3.exceptions.SSLError) as e:
-            http.request("GET", f"https://{host}", retries=False)
+    with (
+        urllib3.PoolManager(ssl_context=ctx) as http,
+        pytest.raises(urllib3.exceptions.SSLError) as e,
+    ):
+        http.request("GET", f"https://{host}", retries=False)
 
     assert "cert" in repr(e.value).lower() and "verif" in repr(e.value).lower()
 

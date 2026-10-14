@@ -253,7 +253,8 @@ async def test_concurrent_handshakes_never_skip_verification(
                 handshake(ctx, server)
             except ssl.SSLCertVerificationError:
                 return None
-            except Exception as e:
+            # Return any unexpected error to the parent thread for assertion.
+            except Exception as e:  # noqa: BLE001
                 return e
             return AssertionError("Handshake didn't raise an error")
 
