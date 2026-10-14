@@ -33,13 +33,13 @@ def inject_into_ssl() -> None:
     """Injects the :class:`truststore.SSLContext` into the ``ssl``
     module by replacing :class:`ssl.SSLContext`.
     """
-    setattr(ssl, "SSLContext", SSLContext)
+    vars(ssl)["SSLContext"] = SSLContext
     # urllib3 holds on to its own reference of ssl.SSLContext
     # so we need to replace that reference too.
     try:
         import urllib3.util.ssl_ as urllib3_ssl
 
-        setattr(urllib3_ssl, "SSLContext", SSLContext)
+        vars(urllib3_ssl)["SSLContext"] = SSLContext
     except ImportError:
         pass
 
@@ -52,10 +52,8 @@ def inject_into_ssl() -> None:
 
         preloaded_context = getattr(requests.adapters, "_preloaded_ssl_context", None)
         if preloaded_context is not None:
-            setattr(
-                requests.adapters,
-                "_preloaded_ssl_context",
-                SSLContext(ssl.PROTOCOL_TLS_CLIENT),
+            vars(requests.adapters)["_preloaded_ssl_context"] = SSLContext(
+                ssl.PROTOCOL_TLS_CLIENT
             )
     except ImportError:
         pass
@@ -63,11 +61,11 @@ def inject_into_ssl() -> None:
 
 def extract_from_ssl() -> None:
     """Restores the :class:`ssl.SSLContext` class to its original state"""
-    setattr(ssl, "SSLContext", _original_SSLContext)
+    vars(ssl)["SSLContext"] = _original_SSLContext
     try:
         import urllib3.util.ssl_ as urllib3_ssl
 
-        urllib3_ssl.SSLContext = _original_SSLContext
+        vars(urllib3_ssl)["SSLContext"] = _original_SSLContext
     except ImportError:
         pass
 
