@@ -2,7 +2,6 @@
 # require administrator approval to modify.
 
 .github/workflows/deploy.yml                @sethmlarson @davisagli
-.github/scripts/build-dists.sh             @sethmlarson @davisagli
 .github/workflows/pylock.deploy.toml        @sethmlarson @davisagli
 .github/CODEOWNERS                          @sethmlarson @davisagli
 src/truststore/__init__.py                  @sethmlarson @davisagli
