@@ -20,7 +20,14 @@ jobs:
           python-version: "3.13"
 
       - name: "Build dists"
-        run: bash .github/scripts/build-dists.sh
+        shell: bash
+        run: |
+          python -m pip install --upgrade --only-binary :all: 'pip>=26.2.1'
+          python -m pip install --only-binary :all: -r .github/workflows/pylock.deploy.toml
+
+          SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
+          export SOURCE_DATE_EPOCH
+          python -m build --no-isolation
 
       - name: "Publish dists to PyPI"
         uses: "pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33" # v1.14.2
