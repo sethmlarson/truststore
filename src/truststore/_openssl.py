@@ -42,7 +42,7 @@ def _configure_context(ctx: ssl.SSLContext) -> typing.Iterator[None]:
         # Load all certs into an empty SSLContext.
         new_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         _load_ca_certs(new_ctx)
-        new_certs.update(ctx.get_ca_certs(binary_form=True))
+        new_certs.update(new_ctx.get_ca_certs(binary_form=True))
 
     # If the new certificates aren't all in the current
     # context, then load all certificates again into
