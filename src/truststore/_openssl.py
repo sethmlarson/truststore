@@ -3,6 +3,7 @@ import os
 import re
 import ssl
 import typing
+import weakref
 
 # candidates based on https://github.com/tiran/certifi-system-store by Christian Heimes
 _CA_FILE_CANDIDATES = [
@@ -24,9 +25,15 @@ _CA_FILE_CANDIDATES = [
 
 _HASHED_CERT_FILENAME_RE = re.compile(r"^[0-9a-fA-F]{8}\.[0-9]$")
 
+_configured_contexts: weakref.WeakSet[ssl.SSLContext] = weakref.WeakSet()
+
 
 @contextlib.contextmanager
 def _configure_context(ctx: ssl.SSLContext) -> typing.Iterator[None]:
+    if ctx in _configured_contexts:
+        yield
+        return
+
     # First, check whether the default locations from OpenSSL
     # seem like they will give us a usable set of CA certs.
     # ssl.get_default_verify_paths already takes care of:
@@ -54,6 +61,7 @@ def _configure_context(ctx: ssl.SSLContext) -> typing.Iterator[None]:
                 ctx.load_verify_locations(cafile=cafile_or_cadir)
                 break
 
+    _configured_contexts.add(ctx)
     yield
 
 
