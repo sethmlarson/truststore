@@ -23,10 +23,98 @@ _CA_FILE_CANDIDATES = [
 ]
 
 _HASHED_CERT_FILENAME_RE = re.compile(r"^[0-9a-fA-F]{8}\.[0-9]$")
+_CONTEXT_STATE_ATTR = "_truststore_openssl_ca_state"
+
+
+class _FileIdentity(typing.NamedTuple):
+    """Identify a file version without reading its contents."""
+
+    path: str
+    device: int
+    inode: int
+    size: int
+    modified_ns: int
+    changed_ns: int
+
+
+class _CASourceState(typing.NamedTuple):
+    """Describe the automatic sources whose changes require a reload."""
+
+    cafile: _FileIdentity | None
+    capath: str | None
+    fallback_files: tuple[_FileIdentity, ...]
 
 
 @contextlib.contextmanager
 def _configure_context(ctx: ssl.SSLContext) -> typing.Iterator[None]:
+    """Load a changed automatic CA source before wrapping a connection."""
+
+    # Repeated wraps reuse this context's OpenSSL store and its source state.
+    previous_source = getattr(ctx, _CONTEXT_STATE_ATTR, None)
+    if not isinstance(previous_source, _CASourceState):
+        previous_source = None
+
+    source = _discover_ca_source()
+    if source is not None and source != previous_source:
+        loaded = _load_changed_ca_source(ctx, source, previous_source)
+        if loaded:
+            # Keep the snapshot with the OpenSSL store that it describes.
+            setattr(ctx, _CONTEXT_STATE_ATTR, source)
+
+    yield
+
+
+def _file_identity(path: str | None) -> _FileIdentity | None:
+    """Return the file metadata that changes for ordinary content updates."""
+
+    if path is None:
+        return None
+    try:
+        stat = os.stat(path)
+    except OSError:
+        return None
+    return _FileIdentity(
+        path=path,
+        device=stat.st_dev,
+        inode=stat.st_ino,
+        size=stat.st_size,
+        modified_ns=stat.st_mtime_ns,
+        changed_ns=stat.st_ctime_ns,
+    )
+
+
+def _directory_file_identities(path: str) -> list[_FileIdentity]:
+    """Return identities for hashed certificate files in one directory."""
+
+    files = []
+    for name in sorted(os.listdir(path)):
+        if not _HASHED_CERT_FILENAME_RE.match(name):
+            continue
+
+        identity = _file_identity(os.path.join(path, name))
+        if identity is not None:
+            files.append(identity)
+    return files
+
+
+def _fallback_ca_source_state() -> tuple[_FileIdentity, ...]:
+    """Return the versions of files available through fallback sources."""
+
+    files = []
+    for candidate in _CA_FILE_CANDIDATES:
+        if os.path.isdir(candidate):
+            files.extend(_directory_file_identities(candidate))
+            continue
+
+        identity = _file_identity(candidate)
+        if identity is not None:
+            files.append(identity)
+    return tuple(files)
+
+
+def _discover_ca_source() -> _CASourceState | None:
+    """Return the automatic CA source and its current version."""
+
     # First, check whether the default locations from OpenSSL
     # seem like they will give us a usable set of CA certs.
     # ssl.get_default_verify_paths already takes care of:
@@ -38,23 +126,70 @@ def _configure_context(ctx: ssl.SSLContext) -> typing.Iterator[None]:
     #   and verifying that that path exists
     # In addition we'll check whether capath appears to contain certs.
     defaults = ssl.get_default_verify_paths()
-    if defaults.cafile or (defaults.capath and _capath_contains_certs(defaults.capath)):
-        ctx.set_default_verify_paths()
-    else:
-        # cafile from OpenSSL doesn't exist and capath from OpenSSL doesn't
-        # contain certs. If the path is a directory, load the PEM files in
-        # that directory; if it's a single file, load it as a file.
-        for cafile_or_cadir in _CA_FILE_CANDIDATES:
-            if os.path.isdir(cafile_or_cadir):
-                cadata = load_cadir_to_cadata(cafile_or_cadir)
-                if cadata:
-                    ctx.load_verify_locations(cadata=cadata)
-                    break
-            elif os.path.isfile(cafile_or_cadir):
-                ctx.load_verify_locations(cafile=cafile_or_cadir)
-                break
+    cafile = defaults.cafile
+    capath = defaults.capath
+    cafile_identity = _file_identity(cafile)
 
-    yield
+    # A capath is usable only after it contains a hashed certificate.
+    if cafile is not None or (capath is not None and _capath_contains_certs(capath)):
+        return _CASourceState(
+            cafile=cafile_identity,
+            capath=capath,
+            fallback_files=(),
+        )
+
+    # OpenSSL found no usable defaults, so inspect platform fallbacks.
+    fallback_files = _fallback_ca_source_state()
+    if not fallback_files:
+        return None
+    return _CASourceState(
+        cafile=None,
+        capath=None,
+        fallback_files=fallback_files,
+    )
+
+
+def _load_changed_ca_source(
+    ctx: ssl.SSLContext,
+    source: _CASourceState,
+    previous_source: _CASourceState | None,
+) -> bool:
+    """Apply a source change and report whether its state can be stored."""
+
+    same_default_directory = (
+        not source.fallback_files
+        and previous_source is not None
+        and not previous_source.fallback_files
+        and source.capath == previous_source.capath
+    )
+    if same_default_directory:
+        # OpenSSL looks up directory certificates lazily; refresh only the file.
+        if source.cafile is not None:
+            ctx.load_verify_locations(cafile=source.cafile.path)
+        return True
+    return _load_ca_source(ctx, source)
+
+
+def _load_ca_source(ctx: ssl.SSLContext, source: _CASourceState) -> bool:
+    """Load one discovered automatic CA source."""
+
+    if not source.fallback_files:
+        ctx.set_default_verify_paths()
+        return True
+
+    # cafile from OpenSSL doesn't exist and capath from OpenSSL doesn't
+    # contain certs. If the path is a directory, load the PEM files in
+    # that directory; if it's a single file, load it as a file.
+    for cafile_or_cadir in _CA_FILE_CANDIDATES:
+        if os.path.isdir(cafile_or_cadir):
+            cadata = load_cadir_to_cadata(cafile_or_cadir)
+            if cadata:
+                ctx.load_verify_locations(cadata=cadata)
+                return True
+        elif os.path.isfile(cafile_or_cadir):
+            ctx.load_verify_locations(cafile=cafile_or_cadir)
+            return True
+    return False
 
 
 def load_cadir_to_cadata(cadir: str) -> str | None:
