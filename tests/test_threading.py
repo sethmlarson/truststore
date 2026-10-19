@@ -194,6 +194,7 @@ handshakes = pytest.mark.parametrize(
     ids=["on_connect", "deferred", "wrap_then_connect", "bio"],
 )
 
+
 def test_handshake_omits_default_block_argument(monkeypatch) -> None:
     handshake_calls = []
 
@@ -216,7 +217,6 @@ def test_handshake_omits_default_block_argument(monkeypatch) -> None:
         tls_socket.close()
 
     assert handshake_calls == [tls_socket]
-
 
 
 @handshakes
