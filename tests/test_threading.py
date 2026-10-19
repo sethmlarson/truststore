@@ -194,6 +194,30 @@ handshakes = pytest.mark.parametrize(
     ids=["on_connect", "deferred", "wrap_then_connect", "bio"],
 )
 
+def test_handshake_omits_default_block_argument(monkeypatch) -> None:
+    handshake_calls = []
+
+    def zero_argument_handshake(self) -> None:
+        handshake_calls.append(self)
+
+    monkeypatch.setattr(ssl.SSLSocket, "do_handshake", zero_argument_handshake)
+    monkeypatch.setattr(_api, "_verify_peercerts", lambda *args, **kwargs: None)
+
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    raw_socket = socket.socket()
+    tls_socket = ctx.wrap_socket(
+        raw_socket,
+        server_hostname="example.com",
+        do_handshake_on_connect=False,
+    )
+    try:
+        tls_socket.do_handshake()
+    finally:
+        tls_socket.close()
+
+    assert handshake_calls == [tls_socket]
+
+
 
 @handshakes
 @pytest.mark.asyncio
