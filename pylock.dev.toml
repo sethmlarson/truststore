@@ -397,19 +397,19 @@ sha256 = "0da0a936a8aeb554eccb426dc55af3ba63bcdc69fa1a600b5bb305413a4477b5"
 
 [[packages]]
 name = "certifi"
-version = "2026.7.22"
+version = "2026.10.19"
 marker = "\"dev\" in dependency_groups"
 requires-python = ">=3.7"
 index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
-name = "certifi-2026.7.22-py3-none-any.whl"
-upload-time = 2026-07-22 03:35:11.276376+00:00
-url = "https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl"
-size = 136983
+name = "certifi-2026.10.19-py3-none-any.whl"
+upload-time = 2026-10-20 02:24:15.072385+00:00
+url = "https://files.pythonhosted.org/packages/c4/51/29046e48f693c54e5b7412216d447a1d8362c9653148d98c02cdf65fa733/certifi-2026.10.19-py3-none-any.whl"
+size = 136464
 
 [packages.wheels.hashes]
-sha256 = "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775"
+sha256 = "42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b"
 
 [[packages]]
 name = "cffi"
@@ -2513,7 +2513,6 @@ command-line = [
     "dev",
     "--output",
     "pylock.dev.toml",
-    "--upgrade",
 ]
 input-path = "pyproject.toml"
 mode = "universal"
