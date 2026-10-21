@@ -264,6 +264,7 @@ CertAddEncodedCertificateToStore.argtypes = (
     PCCERT_CONTEXT,
 )
 CertAddEncodedCertificateToStore.restype = BOOL
+CertAddEncodedCertificateToStore.errcheck = _handle_win_error
 
 CertCreateCertificateContext = wincrypt.CertCreateCertificateContext
 CertCreateCertificateContext.argtypes = (DWORD, c_char_p, DWORD)
