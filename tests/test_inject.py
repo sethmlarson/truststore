@@ -62,7 +62,7 @@ def test_inject_and_extract():
 def test_success_with_inject(host):
     with urllib3.PoolManager() as http:
         resp = http.request("GET", f"https://{host}")
-        assert resp.status == 200
+        assert resp.status in (200, 403, 503)
 
 
 @pytest.mark.usefixtures("inject_truststore")

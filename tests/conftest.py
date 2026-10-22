@@ -20,10 +20,12 @@ original_SSLContext = ssl.SSLContext
 
 
 def decorator_requires_internet(decorator):
-    """Mark a decorator with the "internet" mark"""
+    """Mark parametrized Internet tests for delayed retries."""
 
     def wrapper(f):
-        return pytest.mark.internet(decorator(f))
+        return pytest.mark.flaky(reruns=9, reruns_delay=1)(
+            pytest.mark.internet(decorator(f))
+        )
 
     return wrapper
 
