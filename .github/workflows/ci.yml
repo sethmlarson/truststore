@@ -41,15 +41,16 @@ jobs:
         python: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
         include:
           # Oldest available patches catch regressions hidden by later patch releases.
-          - os: ubuntu-latest
+          # These builds are unavailable on Ubuntu 26.04.
+          - os: ubuntu-24.04
             python: {key: "3.10-min", version: "3.10.4"}
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             python: {key: "3.11-min", version: "3.11.0"}
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             python: {key: "3.12-min", version: "3.12.0"}
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             python: {key: "3.13-min", version: "3.13.0"}
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             python: {key: "3.14-min", version: "3.14.0"}
           # Match cryptography's pp73 Linux and pp80 macOS/Windows wheels.
           - os: ubuntu-latest
@@ -60,7 +61,7 @@ jobs:
             python: "pypy3.11-v8.0.0"
 
     runs-on: ${{ matrix.os }}
-    name: ${{ fromJSON('{"macos-latest":"macOS","windows-latest":"Windows","ubuntu-latest":"Ubuntu"}')[matrix.os] }} Python ${{ matrix.python.key || matrix.python }}  # zizmor: ignore[obfuscation]
+    name: ${{ fromJSON('{"macos-latest":"macOS","windows-latest":"Windows","ubuntu-latest":"Ubuntu","ubuntu-24.04":"Ubuntu"}')[matrix.os] }} Python ${{ matrix.python.key || matrix.python }}  # zizmor: ignore[obfuscation]
     continue-on-error: false
     timeout-minutes: 10
     steps:
