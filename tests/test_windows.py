@@ -1,0 +1,52 @@
+import ssl
+import sys
+from collections.abc import Sized
+
+import pytest
+import trustme
+
+if sys.platform == "win32":
+    from truststore import _windows as windows
+
+pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="requires Windows")
+
+
+def test_policy_error_buffer_size_counts_wide_characters(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed_size: tuple[int, int] | None = None
+    original_format_message = windows.FormatMessageW
+
+    def record_format_message(
+        flags: int,
+        source: object,
+        message_id: int,
+        language_id: int,
+        buffer: Sized,
+        size: int,
+        arguments: object,
+    ) -> int:
+        nonlocal observed_size
+        observed_size = size, len(buffer)
+        return original_format_message(
+            flags,
+            source,
+            message_id,
+            language_id,
+            buffer,
+            size,
+            arguments,
+        )
+
+    monkeypatch.setattr(windows, "FormatMessageW", record_format_message)
+
+    certificate = trustme.CA().issue_cert("example.com")
+    certificate_der = ssl.PEM_cert_to_DER_cert(
+        certificate.cert_chain_pems[0].bytes().decode("ascii")
+    )
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+    with pytest.raises(ssl.SSLCertVerificationError):
+        windows._verify_peercerts_impl(context, [certificate_der], "example.com")
+
+    assert observed_size == (1024, 1024)

@@ -482,7 +482,7 @@ def _get_and_verify_cert_chain(
                 error_code,
                 0,
                 error_message_buf,
-                sizeof(error_message_buf),
+                len(error_message_buf),
                 None,
             )
 
