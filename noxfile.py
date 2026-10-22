@@ -24,7 +24,6 @@ def test(session):
         "-v",
         "-s",
         "-rs",
-        "--no-flaky-report",
         *(session.posargs or ("tests/",)),
     )
 

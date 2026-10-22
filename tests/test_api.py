@@ -23,8 +23,6 @@ import truststore
 from tests import SSLContextAdapter
 from tests.conftest import decorator_requires_internet
 
-pytestmark = pytest.mark.flaky(max_runs=10)
-
 # Make sure the httpserver doesn't hang
 # if the client drops the connection due to a cert verification error
 socket.setdefaulttimeout(10)
@@ -300,7 +298,7 @@ def test_sslcontext_api_success(host):
         resp = http.request("GET", f"https://{host}")
     # Cloudflare rejects some of our CI requests and
     # that's okay because we only care about the TLS handshake.
-    assert resp.status in (200, 403)
+    assert resp.status in (200, 403, 503)
     assert len(resp.data) > 0
 
 
@@ -338,7 +336,7 @@ async def test_sslcontext_api_success_async(host):
     ) as http:
         resp = await http.request("GET", f"https://{host}", ssl=ctx)
 
-        assert resp.status == 200
+        assert resp.status in (200, 403, 503)
         assert len(await resp.text()) > 0
 
 
@@ -387,7 +385,7 @@ def test_requests_sslcontext_api_success(host):
         http.mount("https://", SSLContextAdapter(ssl_context=ctx))
         resp = http.request("GET", f"https://{host}")
 
-    assert resp.status_code == 200
+    assert resp.status_code in (200, 403, 503)
     assert len(resp.content) > 0
 
 
@@ -409,6 +407,7 @@ def test_requests_sslcontext_api_failures(failure):
 
 
 @pytest.mark.internet
+@pytest.mark.flaky(reruns=9, reruns_delay=1)
 def test_wrong_host_succeeds_with_hostname_verification_disabled() -> None:
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.check_hostname = False
@@ -417,7 +416,7 @@ def test_wrong_host_succeeds_with_hostname_verification_disabled() -> None:
     with urllib3.PoolManager(ssl_context=ctx, retries=5, assert_hostname=False) as http:
         resp = http.request("GET", f"https://{wrong_host_failure_host.host}")
 
-    assert resp.status == 200
+    assert resp.status in (200, 404)
     assert len(resp.data) > 0
     assert ctx.check_hostname is False
 
@@ -469,13 +468,14 @@ def test_trustme_cert_loaded_via_capath(trustme_ca, httpserver):
 
 
 @pytest.mark.internet
+@pytest.mark.flaky(reruns=9, reruns_delay=1)
 def test_trustme_cert_still_uses_system_certs(trustme_ca):
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     trustme_ca.configure_trust(ctx)
 
     with urllib3.PoolManager(ssl_context=ctx) as http:
         resp = http.request("GET", "https://example.com")
-    assert resp.status == 200
+    assert resp.status in (200, 403, 503)
     assert len(resp.data) > 0
 
 

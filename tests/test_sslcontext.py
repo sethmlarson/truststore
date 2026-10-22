@@ -7,10 +7,9 @@ from urllib3.exceptions import InsecureRequestWarning, SSLError
 
 import truststore
 
-pytestmark = pytest.mark.flaky(max_runs=10)
-
 
 @pytest.mark.internet
+@pytest.mark.flaky(reruns=9, reruns_delay=1)
 def test_minimum_maximum_version():
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.maximum_version = ssl.TLSVersion.TLSv1_2
@@ -28,6 +27,7 @@ def test_minimum_maximum_version():
 
 
 @pytest.mark.internet
+@pytest.mark.flaky(reruns=9, reruns_delay=1)
 def test_check_hostname_false():
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     assert ctx.check_hostname is True
@@ -40,6 +40,7 @@ def test_check_hostname_false():
 
 
 @pytest.mark.internet
+@pytest.mark.flaky(reruns=9, reruns_delay=1)
 def test_verify_mode_cert_none():
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     assert ctx.check_hostname is True
