@@ -17,6 +17,10 @@ defaults:
 env:
   FORCE_COLOR: "1"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -56,7 +60,7 @@ jobs:
             python: "pypy3.11-v8.0.0"
 
     runs-on: ${{ matrix.os }}
-    name: ${{ fromJSON('{"macos-latest":"macOS","windows-latest":"Windows","ubuntu-latest":"Ubuntu"}')[matrix.os] }} Python ${{ matrix.python.key || matrix.python }}
+    name: ${{ fromJSON('{"macos-latest":"macOS","windows-latest":"Windows","ubuntu-latest":"Ubuntu"}')[matrix.os] }} Python ${{ matrix.python.key || matrix.python }}  # zizmor: ignore[obfuscation]
     continue-on-error: false
     timeout-minutes: 10
     steps:
@@ -122,7 +126,7 @@ jobs:
       - name: Patch tests to install local copy of truststore
         working-directory: "${{ github.workspace }}/pip"
         run: |
-          sed -i 's|script.pip("install", "truststore")|script.pip("install", "${{ github.workspace }}/truststore")|' tests/functional/test_truststore.py
+          sed -i 's|script.pip("install", "truststore")|script.pip("install", "'"$GITHUB_WORKSPACE"'/truststore")|' tests/functional/test_truststore.py
 
       - name: Run tests
         working-directory: "${{ github.workspace }}/pip"

@@ -12,3 +12,12 @@ repos:
         args: ["--strict"]
         additional_dependencies: [types-requests, types-urllib3]
         exclude: "^(tests/.*|noxfile.py)"
+
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    # Zizmor version.
+    rev: v1.31.1
+    hooks:
+      # Run the linter.
+      - id: zizmor
+        args: [--no-progress, --pedantic, --fix]
+
