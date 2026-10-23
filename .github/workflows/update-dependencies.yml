@@ -5,15 +5,18 @@ on:
   schedule:
     - cron: "17 6 1 * *"
 
+permissions: {}
+
 concurrency:
   group: update-dependencies
   cancel-in-progress: false
 
 jobs:
   update:
+    name: Update dependency locks
     permissions:
-      contents: write
-      pull-requests: write
+      contents: write # Push the dependency update branch.
+      pull-requests: write # Open and update the dependency pull request.
     runs-on: ubuntu-latest
     outputs:
       operation: ${{ steps.update.outputs.pull-request-operation }}
@@ -50,7 +53,8 @@ jobs:
 
       - name: Open dependency update
         id: update
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        # v8.1.1 signs commits and maintains the update branch and pull request.
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # zizmor: ignore[superfluous-actions]
         with:
           token: ${{ github.token }}
           sign-commits: true
@@ -66,10 +70,11 @@ jobs:
           body: Refresh the development and deployment locks under the policy in `pyproject.toml`.
 
   run-ci:
+    name: Start CI for the update
     needs: update
     if: needs.update.outputs.operation == 'created' || needs.update.outputs.operation == 'updated'
     permissions:
-      actions: write
+      actions: write # Dispatch the CI workflow for the update branch.
     runs-on: ubuntu-latest
     steps:
       - name: Run CI for the update
