@@ -19,19 +19,23 @@ jobs:
       id-token: write  # Required for Trusted Publishers
     steps:
       - name: "Checkout repository"
-        uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" # v4
+        uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" # v7.0.1
         with:
           persist-credentials: false
       - name: "Setup Python"
         uses: "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" # v7.0.0
         with:
-          python-version: "3.x"
+          python-version: "3.13"
 
       - name: "Build dists"
+        shell: bash
         run: |
-          python -m pip install -r .github/workflows/deploy-requirements.txt
-          SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct) \
-          python -m build
+          python -m pip install --upgrade --only-binary :all: 'pip>=26.2.1'
+          python -m pip install --only-binary :all: -r .github/workflows/pylock.deploy.toml
+
+          SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
+          export SOURCE_DATE_EPOCH
+          python -m build --no-isolation
 
       - name: "Publish dists to PyPI"
         uses: "pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33" # v1.14.2
