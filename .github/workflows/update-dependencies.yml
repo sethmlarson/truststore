@@ -1,0 +1,84 @@
+name: Update dependencies
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 1 * *"
+
+permissions: {}
+
+concurrency:
+  group: update-dependencies
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update dependency locks
+    permissions:
+      contents: write # Push the dependency update branch.
+      pull-requests: write # Open and update the dependency pull request.
+    runs-on: ubuntu-latest
+    outputs:
+      operation: ${{ steps.update.outputs.pull-request-operation }}
+      branch: ${{ steps.update.outputs.pull-request-branch }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.12.22"
+
+      - name: Update development lock
+        run: uvx nab==0.0.22 lock --groups dev --output pylock.dev.toml --upgrade
+
+      - name: Update deployment lock
+        run: >-
+          uvx nab==0.0.22 lock
+          --project-mode specific
+          --project-default-group deploy
+          --project-default-group build-system
+          --project-base-group runtime
+          --project-build-group build-system
+          --project-environment-python 3.13
+          --project-environment-platform linux_x86_64
+          --project-environment-implementation cpython
+          --groups deploy
+          --output .github/workflows/pylock.deploy.toml
+          --upgrade
+
+      - name: Open dependency update
+        id: update
+        # v8.1.1 signs commits and maintains the update branch and pull request.
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # zizmor: ignore[superfluous-actions]
+        with:
+          token: ${{ github.token }}
+          sign-commits: true
+          add-paths: |
+            pylock.dev.toml
+            .github/workflows/pylock.deploy.toml
+          base: ${{ github.event.repository.default_branch }}
+          branch: dependencies/pylock
+          commit-message: Update locked dependencies
+          delete-branch: true
+          draft: true
+          title: Update locked dependencies
+          body: Refresh the development and deployment locks under the policy in `pyproject.toml`.
+
+  run-ci:
+    name: Start CI for the update
+    needs: update
+    if: needs.update.outputs.operation == 'created' || needs.update.outputs.operation == 'updated'
+    permissions:
+      actions: write # Dispatch the CI workflow for the update branch.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run CI for the update
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BRANCH: ${{ needs.update.outputs.branch }}
+        run: gh workflow run ci.yml --repo "${GITHUB_REPOSITORY:?}" --ref "${PR_BRANCH:?}"
