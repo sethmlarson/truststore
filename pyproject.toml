@@ -57,9 +57,9 @@ uploaded-prior-to = "P7D" # Seven-day release cooldown.
 dist-policy = "wheel-only"
 build-policy = "never"
 
-# Let this certifi release bypass the cooldown; later releases still wait seven days.
+# Admit the original certifi wheel while excluding later uploads of this version.
 [tool.nab.packages."certifi==2026.10.19"]
-uploaded-prior-to = false
+uploaded-prior-to = "2026-10-20T02:24:15.072386Z"
 
 [tool.nab.matrix]
 python = ">=3.10,<3.16"
