@@ -2,7 +2,7 @@
 # require administrator approval to modify.
 
 .github/workflows/deploy.yml                @sethmlarson @davisagli
-.github/workflows/deploy-requirements.txt   @sethmlarson @davisagli
+.github/workflows/pylock.deploy.toml        @sethmlarson @davisagli
 .github/CODEOWNERS                          @sethmlarson @davisagli
 src/truststore/__init__.py                  @sethmlarson @davisagli
 pyproject.toml                              @sethmlarson @davisagli
