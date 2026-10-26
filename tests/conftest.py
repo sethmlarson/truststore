@@ -10,22 +10,32 @@ import pytest
 import pytest_asyncio
 import trustme
 from aiohttp import web
+from pytest_httpserver import HTTPServer
 
 MKCERT_CA_NOT_INSTALLED = b"local CA is not installed in the system trust store"
 MKCERT_CA_ALREADY_INSTALLED = b"local CA is now installed in the system trust store"
 SUBPROCESS_TIMEOUT = 5
+NETWORK_TIMEOUT = 10
 
 # To avoid getting the SSLContext injected by truststore.
 original_SSLContext = ssl.SSLContext
 
 
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Give Internet tests delayed retries unless they specify their own policy."""
+    for item in items:
+        if (
+            item.get_closest_marker("internet") is not None
+            and item.get_closest_marker("flaky") is None
+        ):
+            item.add_marker(pytest.mark.flaky(reruns=9, reruns_delay=1))
+
+
 def decorator_requires_internet(decorator):
-    """Mark parametrized Internet tests for delayed retries."""
+    """Mark every case produced by a parametrization as requiring Internet access."""
 
     def wrapper(f):
-        return pytest.mark.flaky(reruns=9, reruns_delay=1)(
-            pytest.mark.internet(decorator(f))
-        )
+        return pytest.mark.internet(decorator(f))
 
     return wrapper
 
@@ -33,6 +43,38 @@ def decorator_requires_internet(decorator):
 successful_hosts = decorator_requires_internet(
     pytest.mark.parametrize("host", ["example.com", "1.1.1.1"])
 )
+
+
+@pytest.fixture
+def trustme_ca(request: pytest.FixtureRequest) -> trustme.CA:
+    # pytest supplies request.param only for indirectly parametrized fixtures.
+    return trustme.CA(**getattr(request, "param", {}))
+
+
+@pytest.fixture
+def httpserver_ssl_context(trustme_ca: trustme.CA) -> ssl.SSLContext:
+    server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    server_cert = trustme_ca.issue_cert("localhost")
+    server_cert.configure_cert(server_context)
+    return server_context
+
+
+# Changes pytest-httpserver fixture to be scope='function' instead of 'session'.
+@pytest.fixture(scope="function")
+def make_httpserver(httpserver_listen_address, httpserver_ssl_context):
+    host, port = httpserver_listen_address
+    if not host:
+        host = HTTPServer.DEFAULT_LISTEN_HOST
+    if not port:
+        port = HTTPServer.DEFAULT_LISTEN_PORT
+
+    server = HTTPServer(host=host, port=port, ssl_context=httpserver_ssl_context)
+    server.start()
+    yield server
+    server.clear()
+    if server.is_running():
+        server.stop()
+
 
 logger = logging.getLogger("aiohttp.web")
 

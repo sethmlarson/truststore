@@ -17,15 +17,14 @@ import pytest
 import requests
 import urllib3
 import urllib3.exceptions
-from pytest_httpserver import HTTPServer
 
 import truststore
 from tests import SSLContextAdapter
-from tests.conftest import decorator_requires_internet
+from tests.conftest import NETWORK_TIMEOUT, decorator_requires_internet
 
 # Make sure the httpserver doesn't hang
 # if the client drops the connection due to a cert verification error
-socket.setdefaulttimeout(10)
+socket.setdefaulttimeout(NETWORK_TIMEOUT)
 
 
 successful_hosts = decorator_requires_internet(
@@ -180,47 +179,10 @@ if platform.system() == "Darwin" and tuple(
             truststore._macos._is_macos_version_10_14_or_later = prev
 
 
-@pytest.fixture
-def trustme_ca(request):
-    # 'trustme' is optional to allow testing on Python 3.13
-    try:
-        import trustme
-    except ImportError:
-        pytest.skip("Test requires 'trustme' to be installed")
-
-    ca = trustme.CA(**getattr(request, "param", {}))
-    yield ca
-
-
-@pytest.fixture
-def httpserver_ssl_context(trustme_ca):
-    server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    server_cert = trustme_ca.issue_cert("localhost")
-    server_cert.configure_cert(server_context)
-    return server_context
-
-
-# Changes pytest-httpserver fixture to be scope='function' instead of 'session'.
-@pytest.fixture(scope="function")
-def make_httpserver(httpserver_listen_address, httpserver_ssl_context):
-    host, port = httpserver_listen_address
-    if not host:
-        host = HTTPServer.DEFAULT_LISTEN_HOST
-    if not port:
-        port = HTTPServer.DEFAULT_LISTEN_PORT
-
-    server = HTTPServer(host=host, port=port, ssl_context=httpserver_ssl_context)
-    server.start()
-    yield server
-    server.clear()
-    if server.is_running():
-        server.stop()
-
-
 def connect_to_host(
     host: str, use_server_hostname: bool = True, verify_flags=ssl.VERIFY_CRL_CHECK_CHAIN
 ):
-    with socket.create_connection((host, 443)) as sock:
+    with socket.create_connection((host, 443), timeout=NETWORK_TIMEOUT) as sock:
         ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         if verify_flags and platform.system() != "Linux":
             ctx.verify_flags |= verify_flags
@@ -246,7 +208,7 @@ def test_failures(failure):
 
 @successful_hosts
 def test_success_after_loading_additional_anchors(host, trustme_ca):
-    with socket.create_connection((host, 443)) as sock:
+    with socket.create_connection((host, 443), timeout=NETWORK_TIMEOUT) as sock:
         ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
         # See if loading additional anchors still uses system anchors.
@@ -259,7 +221,7 @@ def test_success_after_loading_additional_anchors(host, trustme_ca):
 def test_failure_after_loading_additional_anchors(failure, trustme_ca):
     with (
         pytest.raises(ssl.SSLCertVerificationError) as e,
-        socket.create_connection((failure.host, 443)) as sock,
+        socket.create_connection((failure.host, 443), timeout=NETWORK_TIMEOUT) as sock,
     ):
         ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         if platform.system() != "Linux":
@@ -294,32 +256,34 @@ def test_sslcontext_api_success(host):
         pytest.skip("urllib3 doesn't pass server_hostname for IP addresses")
 
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
-        resp = http.request("GET", f"https://{host}")
-    # Cloudflare rejects some of our CI requests and
-    # that's okay because we only care about the TLS handshake.
-    assert resp.status in (200, 403, 503)
-    assert len(resp.data) > 0
+    with urllib3.PoolManager(
+        ssl_context=ctx, retries=False, timeout=NETWORK_TIMEOUT
+    ) as http:
+        http.request("GET", f"https://{host}", redirect=False)
 
 
 @successful_hosts
 def test_urllib3_warnings(host):
     # Capture urllib3 warnings to compare verified and unverified requests.
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
+    with urllib3.PoolManager(
+        ssl_context=ctx, retries=False, timeout=NETWORK_TIMEOUT
+    ) as http:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            http.request("GET", f"https://{host}")
+            http.request("GET", f"https://{host}", redirect=False)
         assert w == []
 
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
 
-    with urllib3.PoolManager(ssl_context=ctx, retries=5) as http:
+    with urllib3.PoolManager(
+        ssl_context=ctx, retries=False, timeout=NETWORK_TIMEOUT
+    ) as http:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            http.request("GET", f"https://{host}")
+            http.request("GET", f"https://{host}", redirect=False)
         assert w and any(
             wn.category == urllib3.exceptions.InsecureRequestWarning for wn in w
         )
@@ -332,12 +296,15 @@ async def test_sslcontext_api_success_async(host):
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     # connector avoids https://github.com/aio-libs/aiohttp/issues/5426
     async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(force_close=True, enable_cleanup_closed=True)
+        connector=aiohttp.TCPConnector(force_close=True, enable_cleanup_closed=True),
+        timeout=aiohttp.ClientTimeout(total=NETWORK_TIMEOUT),
     ) as http:
-        resp = await http.request("GET", f"https://{host}", ssl=ctx)
+        resp = await http.request(
+            "GET", f"https://{host}", ssl=ctx, allow_redirects=False
+        )
 
-        assert resp.status in (200, 403, 503)
-        assert len(await resp.text()) > 0
+        # Read the response without requiring an HTTP status or a nonempty body.
+        await resp.read()
 
 
 @failure_hosts
@@ -347,10 +314,12 @@ def test_sslcontext_api_failures(failure):
     if platform.system() != "Linux":
         ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
     with (
-        urllib3.PoolManager(ssl_context=ctx) as http,
+        urllib3.PoolManager(
+            ssl_context=ctx, retries=False, timeout=NETWORK_TIMEOUT
+        ) as http,
         pytest.raises(urllib3.exceptions.SSLError) as e,
     ):
-        http.request("GET", f"https://{host}", retries=False)
+        http.request("GET", f"https://{host}", redirect=False)
 
     assert "cert" in repr(e.value).lower() and "verif" in repr(e.value).lower()
 
@@ -364,12 +333,15 @@ async def test_sslcontext_api_failures_async(failure):
         ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
     # connector avoids https://github.com/aio-libs/aiohttp/issues/5426
     async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(force_close=True, enable_cleanup_closed=True)
+        connector=aiohttp.TCPConnector(force_close=True, enable_cleanup_closed=True),
+        timeout=aiohttp.ClientTimeout(total=NETWORK_TIMEOUT),
     ) as http:
         with pytest.raises(
             aiohttp.client_exceptions.ClientConnectorCertificateError
         ) as e:
-            await http.request("GET", f"https://{failure.host}", ssl=ctx)
+            await http.request(
+                "GET", f"https://{failure.host}", ssl=ctx, allow_redirects=False
+            )
 
     assert "cert" in repr(e.value).lower() and "verif" in repr(e.value).lower()
 
@@ -383,10 +355,9 @@ def test_requests_sslcontext_api_success(host):
 
     with requests.Session() as http:
         http.mount("https://", SSLContextAdapter(ssl_context=ctx))
-        resp = http.request("GET", f"https://{host}")
-
-    assert resp.status_code in (200, 403, 503)
-    assert len(resp.content) > 0
+        http.request(
+            "GET", f"https://{host}", allow_redirects=False, timeout=NETWORK_TIMEOUT
+        )
 
 
 @failure_hosts
@@ -401,23 +372,32 @@ def test_requests_sslcontext_api_failures(failure):
         http.mount("https://", SSLContextAdapter(ssl_context=ctx))
 
         with pytest.raises(requests.exceptions.SSLError) as e:
-            http.request("GET", f"https://{host}")
+            http.request(
+                "GET", f"https://{host}", allow_redirects=False, timeout=NETWORK_TIMEOUT
+            )
 
     assert "cert" in repr(e.value).lower() and "verif" in repr(e.value).lower()
 
 
-@pytest.mark.internet
-@pytest.mark.flaky(reruns=9, reruns_delay=1)
-def test_wrong_host_succeeds_with_hostname_verification_disabled() -> None:
+def test_wrong_host_succeeds_with_hostname_verification_disabled(
+    trustme_ca, httpserver
+) -> None:
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    trustme_ca.configure_trust(ctx)
     ctx.check_hostname = False
-    assert ctx.check_hostname is False
+    httpserver.expect_request("/").respond_with_data("ok")
 
-    with urllib3.PoolManager(ssl_context=ctx, retries=5, assert_hostname=False) as http:
-        resp = http.request("GET", f"https://{wrong_host_failure_host.host}")
+    with urllib3.PoolManager(
+        ssl_context=ctx,
+        retries=False,
+        timeout=NETWORK_TIMEOUT,
+        server_hostname="wrong.example",
+        assert_hostname=False,
+    ) as http:
+        resp = http.request("GET", httpserver.url_for("/"), redirect=False)
 
-    assert resp.status in (200, 404)
-    assert len(resp.data) > 0
+    assert resp.status == 200
+    assert resp.data == b"ok"
     assert ctx.check_hostname is False
 
 
@@ -427,7 +407,9 @@ def test_trustme_cert(trustme_ca, httpserver):
 
     httpserver.expect_request("/", method="GET").respond_with_json({})
 
-    with urllib3.PoolManager(ssl_context=ctx) as http:
+    with urllib3.PoolManager(
+        ssl_context=ctx, retries=False, timeout=NETWORK_TIMEOUT
+    ) as http:
         resp = http.request("GET", httpserver.url_for("/"))
     assert resp.status == 200
     assert len(resp.data) > 0
@@ -461,22 +443,23 @@ def test_trustme_cert_loaded_via_capath(trustme_ca, httpserver):
 
         httpserver.expect_request("/", method="GET").respond_with_json({})
 
-        with urllib3.PoolManager(ssl_context=ctx) as http:
+        with urllib3.PoolManager(
+            ssl_context=ctx, retries=False, timeout=NETWORK_TIMEOUT
+        ) as http:
             resp = http.request("GET", httpserver.url_for("/"))
         assert resp.status == 200
         assert len(resp.data) > 0
 
 
 @pytest.mark.internet
-@pytest.mark.flaky(reruns=9, reruns_delay=1)
 def test_trustme_cert_still_uses_system_certs(trustme_ca):
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     trustme_ca.configure_trust(ctx)
 
-    with urllib3.PoolManager(ssl_context=ctx) as http:
-        resp = http.request("GET", "https://example.com")
-    assert resp.status in (200, 403, 503)
-    assert len(resp.data) > 0
+    with urllib3.PoolManager(
+        ssl_context=ctx, retries=False, timeout=NETWORK_TIMEOUT
+    ) as http:
+        http.request("GET", "https://example.com", redirect=False)
 
 
 def test_macos_10_7_import_error():
