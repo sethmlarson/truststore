@@ -293,6 +293,7 @@ CertVerifyCertificateChainPolicy.argtypes = (
     PCERT_CHAIN_POLICY_STATUS,
 )
 CertVerifyCertificateChainPolicy.restype = BOOL
+CertVerifyCertificateChainPolicy.errcheck = _handle_win_error
 
 CertCloseStore = wincrypt.CertCloseStore
 CertCloseStore.argtypes = (HCERTSTORE, DWORD)
