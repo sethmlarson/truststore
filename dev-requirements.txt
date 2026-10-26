@@ -5,7 +5,7 @@ pytest-asyncio
 pytest-httpserver
 urllib3
 requests
-flaky
+pytest-rerunfailures
 httpx
 trustme
 
