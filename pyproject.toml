@@ -34,6 +34,51 @@ requires-python = ">= 3.10"
 Source = "https://github.com/sethmlarson/truststore"
 Documentation = "https://truststore.readthedocs.io"
 
+[dependency-groups]
+dev = [
+  "aiohttp",
+  "httpx",
+  "nox",
+  "pyopenssl",
+  "pytest==8.3.5",
+  "pytest-asyncio",
+  "pytest-httpserver",
+  "pytest-rerunfailures",
+  "requests",
+  "trustme",
+  "urllib3",
+]
+
+[tool.nab]
+mode = "universal"
+default-groups = ["dev"]
+decision-order = "stable"
+uploaded-prior-to = "P7D" # Seven-day release cooldown.
+dist-policy = "wheel-only"
+build-policy = "never"
+
+# Admit the original certifi wheel while excluding later uploads of this version.
+[tool.nab.packages."certifi==2026.10.19"]
+uploaded-prior-to = "2026-10-20T02:24:15.072386Z"
+
+[tool.nab.matrix]
+python = ">=3.10,<3.16"
+platforms = [
+  "linux_x86_64",
+  {id = "macos_arm64", runs-on-macos = "14.0"},
+  "windows_amd64",
+]
+implementations = ["cpython", "pypy"]
+
+# PyPy 3.11 uses pp73 on Linux and pp80 on macOS and Windows.
+[tool.nab.matrix.overrides.implementations.pypy]
+python = "==3.11"
+platforms = [
+  {id = "linux_x86_64", pypy-abi = "pp73"},
+  {id = "macos_arm64", runs-on-macos = "14.0", pypy-abi = "pp80"},
+  {id = "windows_amd64", pypy-abi = "pp80"},
+]
+
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
