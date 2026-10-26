@@ -1027,18 +1027,18 @@ sha256 = "8c337f7b92445823b0d0ea507f611390c58dcd2112be00aebcd738a2ca7a1c64"
 
 [[packages]]
 name = "distlib"
-version = "0.4.3"
+version = "0.4.4"
 marker = "\"dev\" in dependency_groups"
 index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
-name = "distlib-0.4.3-py2.py3-none-any.whl"
-upload-time = 2026-06-12 08:04:50.506662+00:00
-url = "https://files.pythonhosted.org/packages/02/08/9c41fb51ab5b43eb21674aff13df270e8ba6c4b29c8624e328dc7a9482af/distlib-0.4.3-py2.py3-none-any.whl"
-size = 470628
+name = "distlib-0.4.4-py2.py3-none-any.whl"
+upload-time = 2026-10-16 13:56:32.053304+00:00
+url = "https://files.pythonhosted.org/packages/c1/2b/238f02a4927fa2e27aa995371d240a468b52e42eae44a678434aff736b38/distlib-0.4.4-py2.py3-none-any.whl"
+size = 472099
 
 [packages.wheels.hashes]
-sha256 = "4b0ce306c966eb73bc3a7b6abad017c556dadd92c44701562cd528ac7fde4d5b"
+sha256 = "cf09d55b1e85a89576b036aeb71550bfd68320f3f21761ca329eadadad918638"
 
 [[packages]]
 name = "exceptiongroup"
@@ -1074,22 +1074,6 @@ size = 133003
 
 [packages.wheels.hashes]
 sha256 = "2ce9818e3e2d8f284c1a964414447ef148d42a5fd5e2a477a7118e574b293ec1"
-
-[[packages]]
-name = "flaky"
-version = "3.8.1"
-marker = "\"dev\" in dependency_groups"
-requires-python = ">=3.5"
-index = "https://pypi.org/simple/"
-
-[[packages.wheels]]
-name = "flaky-3.8.1-py2.py3-none-any.whl"
-upload-time = 2024-03-12 22:17:51.590352+00:00
-url = "https://files.pythonhosted.org/packages/7f/b8/b830fc43663246c3f3dd1ae7dca4847b96ed992537e85311e27fa41ac40e/flaky-3.8.1-py2.py3-none-any.whl"
-size = 19139
-
-[packages.wheels.hashes]
-sha256 = "194ccf4f0d3a22b2de7130f4b62e45e977ac1b5ccad74d4d48f3005dcc38815e"
 
 [[packages]]
 name = "frozenlist"
@@ -1733,19 +1717,19 @@ sha256 = "78bfb9db2a8471ed7eebe3c3c932da413911042994e699b384fbb4493fa872d7"
 
 [[packages]]
 name = "pluggy"
-version = "1.6.0"
+version = "1.7.0"
 marker = "\"dev\" in dependency_groups"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
-name = "pluggy-1.6.0-py3-none-any.whl"
-upload-time = 2025-05-15 12:30:06.134003+00:00
-url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl"
-size = 20538
+name = "pluggy-1.7.0-py3-none-any.whl"
+upload-time = 2026-10-15 09:50:56.808462+00:00
+url = "https://files.pythonhosted.org/packages/40/9e/2b38731e0fc536806f16490e1a12d7f0dc2a1235aa8cc07bcc75416a7daa/pluggy-1.7.0-py3-none-any.whl"
+size = 27082
 
 [packages.wheels.hashes]
-sha256 = "e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746"
+sha256 = "7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec"
 
 [[packages]]
 name = "propcache"
@@ -2099,8 +2083,28 @@ size = 23392
 sha256 = "749937892dbf909c8b703503b491be66fc24073e7988bf9b4d783af4f33da942"
 
 [[packages]]
+name = "pytest-rerunfailures"
+version = "16.7"
+marker = "\"dev\" in dependency_groups"
+requires-python = ">=3.10"
+dependencies = [
+    { name = "packaging" },
+    { name = "pytest" },
+]
+index = "https://pypi.org/simple/"
+
+[[packages.wheels]]
+name = "pytest_rerunfailures-16.7-py3-none-any.whl"
+upload-time = 2026-09-17 07:08:47.635167+00:00
+url = "https://files.pythonhosted.org/packages/c1/d3/07ea35102cf2020ddaaac368d2a6f0bcc63d6523fb8918805bac3eb8b98f/pytest_rerunfailures-16.7-py3-none-any.whl"
+size = 23952
+
+[packages.wheels.hashes]
+sha256 = "edf1886209c2b7dafe35b5bf1708d6ec40ccf6c6b357f0f02807efcec0204c99"
+
+[[packages]]
 name = "python-discovery"
-version = "1.6.2"
+version = "1.6.4"
 marker = "\"dev\" in dependency_groups"
 requires-python = ">=3.9"
 dependencies = [
@@ -2109,13 +2113,13 @@ dependencies = [
 index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
-name = "python_discovery-1.6.2-py3-none-any.whl"
-upload-time = 2026-10-10 01:24:26.721179+00:00
-url = "https://files.pythonhosted.org/packages/61/3b/50ed32583bfffa737df67d33b9c15d7b25df232c55ab606d059f610ef6ca/python_discovery-1.6.2-py3-none-any.whl"
-size = 38912
+name = "python_discovery-1.6.4-py3-none-any.whl"
+upload-time = 2026-10-19 01:45:13.668192+00:00
+url = "https://files.pythonhosted.org/packages/60/91/1aa70d3dfcab0dbcf88a2cbc3bce7f7c69562287a90216e617eaa4937e25/python_discovery-1.6.4-py3-none-any.whl"
+size = 39385
 
 [packages.wheels.hashes]
-sha256 = "f0c697f95a3aaec4174a6e5e58f5885e25768684bafc76f1afde384709ebdcf2"
+sha256 = "530179cc51a1816d512b15635b3dc931295ae12efb183783ad31190a5d425d2b"
 
 [[packages]]
 name = "requests"
@@ -2209,7 +2213,7 @@ sha256 = "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3"
 
 [[packages]]
 name = "virtualenv"
-version = "21.14.6"
+version = "21.14.11"
 marker = "\"dev\" in dependency_groups"
 requires-python = ">=3.9"
 dependencies = [
@@ -2223,13 +2227,13 @@ dependencies = [
 index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
-name = "virtualenv-21.14.6-py3-none-any.whl"
-upload-time = 2026-10-08 14:49:54.988049+00:00
-url = "https://files.pythonhosted.org/packages/c9/1f/e5182163bcee149dda4eec823d88b0f51f2c0c531b12da896f666f0b80c1/virtualenv-21.14.6-py3-none-any.whl"
-size = 5487469
+name = "virtualenv-21.14.11-py3-none-any.whl"
+upload-time = 2026-10-18 07:06:32.719110+00:00
+url = "https://files.pythonhosted.org/packages/ce/6b/d85da8982b41190eafcb9df91dff9d83fc6989e98af4b5be4c8f85510c95/virtualenv-21.14.11-py3-none-any.whl"
+size = 5495268
 
 [packages.wheels.hashes]
-sha256 = "eb1a20c5878569b69667f6a1af03458a8512b3afa7be771a2dafe92fdca05bb9"
+sha256 = "b319f8590a84e5de5f8f2c803ecd2237e9bc0ffa7c1e875e3169c107cecb7454"
 
 [[packages]]
 name = "werkzeug"
@@ -2504,8 +2508,8 @@ size = 63617
 sha256 = "681c758b0490f9e96b78e5fa8e8dc6e648e9185bb6eaebe73183c33ea0c445f3"
 
 [tool.nab]
-nab-version = "0.0.22"
-created-at = 2026-10-18 05:47:33.138175+00:00
+nab-version = "0.0.23"
+created-at = 2026-10-26 17:55:01.417758+00:00
 command-line = [
     "nab",
     "lock",
@@ -2513,6 +2517,7 @@ command-line = [
     "dev",
     "--output",
     "pylock.dev.toml",
+    "--upgrade",
 ]
 input-path = "pyproject.toml"
 mode = "universal"

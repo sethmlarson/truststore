@@ -37,13 +37,13 @@ Documentation = "https://truststore.readthedocs.io"
 [dependency-groups]
 dev = [
   "aiohttp",
-  "flaky",
   "httpx",
   "nox",
   "pyopenssl",
   "pytest==8.3.5",
   "pytest-asyncio",
   "pytest-httpserver",
+  "pytest-rerunfailures",
   "requests",
   "trustme",
   "urllib3",
