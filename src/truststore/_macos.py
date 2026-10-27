@@ -76,7 +76,8 @@ CFMutableArrayRef = POINTER(CFMutableArray)
 CFArrayCallBacks = c_void_p
 CFOptionFlags = c_uint32
 
-SecCertificateRef = POINTER(c_void_p)
+SecCertificate = c_void_p
+SecCertificateRef = POINTER(SecCertificate)
 SecPolicyRef = POINTER(c_void_p)
 SecTrustRef = POINTER(c_void_p)
 SecTrustResultType = c_uint32
@@ -86,7 +87,7 @@ try:
     Security.SecCertificateCreateWithData.argtypes = [CFAllocatorRef, CFDataRef]
     Security.SecCertificateCreateWithData.restype = SecCertificateRef
 
-    Security.SecCertificateCopyData.argtypes = [SecCertificateRef]
+    Security.SecCertificateCopyData.argtypes = [SecCertificate]
     Security.SecCertificateCopyData.restype = CFDataRef
 
     Security.SecCopyErrorMessageString.argtypes = [OSStatus, c_void_p]
@@ -122,6 +123,9 @@ try:
         POINTER(SecTrustResultType),
     ]
     Security.SecTrustEvaluate.restype = OSStatus
+
+    Security.SecTrustCopyAnchorCertificates.argtypes = [CFArrayRef]
+    Security.SecTrustCopyAnchorCertificates.restype = OSStatus
 
     Security.SecTrustRef = SecTrustRef  # type: ignore[attr-defined]
     Security.SecTrustResultType = SecTrustResultType  # type: ignore[attr-defined]
@@ -181,10 +185,10 @@ try:
     CoreFoundation.CFArrayAppendValue.argtypes = [CFMutableArrayRef, c_void_p]
     CoreFoundation.CFArrayAppendValue.restype = None
 
-    CoreFoundation.CFArrayGetCount.argtypes = [CFArrayRef]
+    CoreFoundation.CFArrayGetCount.argtypes = [CFArray]
     CoreFoundation.CFArrayGetCount.restype = CFIndex
 
-    CoreFoundation.CFArrayGetValueAtIndex.argtypes = [CFArrayRef, CFIndex]
+    CoreFoundation.CFArrayGetValueAtIndex.argtypes = [CFArray, CFIndex]
     CoreFoundation.CFArrayGetValueAtIndex.restype = c_void_p
 
     CoreFoundation.CFErrorGetCode.argtypes = [CFErrorRef]
@@ -200,6 +204,7 @@ try:
         CoreFoundation, "kCFTypeArrayCallBacks"
     )
 
+    CoreFoundation.CFArray = CFArray # type: ignore[attr-defined]
     CoreFoundation.CFTypeRef = CFTypeRef  # type: ignore[attr-defined]
     CoreFoundation.CFArrayRef = CFArrayRef  # type: ignore[attr-defined]
     CoreFoundation.CFStringRef = CFStringRef  # type: ignore[attr-defined]
@@ -278,7 +283,7 @@ Security.SecTrustSetAnchorCertificates.errcheck = _handle_osstatus  # type: igno
 Security.SecTrustSetAnchorCertificatesOnly.errcheck = _handle_osstatus  # type: ignore[assignment]
 Security.SecTrustGetTrustResult.errcheck = _handle_osstatus  # type: ignore[assignment]
 Security.SecTrustEvaluate.errcheck = _handle_osstatus  # type: ignore[assignment]
-
+Security.SecTrustCopyAnchorCertificates.errcheck = _handle_osstatus # type: ignore[assignment]
 
 class CFConst:
     """CoreFoundation constants"""
@@ -569,3 +574,39 @@ def _verify_peercerts_impl_macos_10_14(
         finally:
             if cf_error_string_ref:
                 CoreFoundation.CFRelease(cf_error_string_ref)
+
+try:
+    CoreFoundation.CFRelease.argtypes = [CFType]
+except AttributeError as e:
+    raise ImportError(f"Error initializing ctypes: {e}") from None
+
+def _load_default_certs_impl(ssl_context: ssl.SSLContext) -> None:
+    """
+    Loads the default system certificates into the SSLContext.
+    """
+
+    certs_array = CFArray(None)
+    Security.SecTrustCopyAnchorCertificates(
+        ctypes.byref(certs_array)
+    )
+
+    count = CoreFoundation.CFArrayGetCount(certs_array)
+
+    for i in range(count):
+        # Get the certificate from the array
+        cert_ref = CoreFoundation.CFArrayGetValueAtIndex(certs_array, i)
+        data_ref = Security.SecCertificateCopyData(cert_ref)
+
+        length = CoreFoundation.CFDataGetLength(data_ref)
+        data_ptr = CoreFoundation.CFDataGetBytePtr(data_ref)
+
+        cert_bytes = ctypes.string_at(data_ptr, length)
+
+        # Load the certificate into the SSLContext
+        ssl_context.load_verify_locations(
+            cadata=cert_bytes
+        )
+
+        CoreFoundation.CFRelease(data_ref)
+
+    CoreFoundation.CFRelease(certs_array)
