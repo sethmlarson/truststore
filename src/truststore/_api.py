@@ -104,7 +104,10 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
             # guarantees this by always wrapping with do_handshake_on_connect=False.
             def do_handshake(self, block: bool = False) -> None:
                 with ctx_lock:
-                    ret = super().do_handshake(block)
+                    if block:
+                        ret = super().do_handshake(block)
+                    else:
+                        ret = super().do_handshake()
                     try:
                         _verify_peercerts(self, server_hostname=self.server_hostname)
                     except Exception:
