@@ -70,6 +70,34 @@ def extract_from_ssl() -> None:
         pass
 
 
+class _TruststoreSSLObject(ssl.SSLObject):
+    # This object exists because wrap_bio() doesn't
+    # immediately do the handshake so we need to do
+    # certificate verifications after SSLObject.do_handshake()
+
+    def do_handshake(self) -> None:
+        with self.context._truststore_lock:  # type: ignore[attr-defined]
+            ret = super().do_handshake()
+            _verify_peercerts(self, server_hostname=self.server_hostname)
+            return ret
+
+
+class _TruststoreSSLSocket(ssl.SSLSocket):
+    # Handles do_handshake_on_connect=False, explicit do_handshake()
+    # calls, and the handshake that SSLSocket.connect() triggers.
+    # Must never be called inside _configure_context(). wrap_socket()
+    # guarantees this by always wrapping with do_handshake_on_connect=False.
+    def do_handshake(self, block: bool = False) -> None:
+        with self.context._truststore_lock:  # type: ignore[attr-defined]
+            ret = super().do_handshake(block)
+            try:
+                _verify_peercerts(self, server_hostname=self.server_hostname)
+            except Exception:
+                self.close()
+                raise
+        return ret
+
+
 class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
     """SSLContext API that uses system certificates on all platforms"""
 
@@ -84,36 +112,10 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         self._ctx = _original_SSLContext(protocol)
         self._ctx_lock = threading.RLock()
 
-        ctx_lock = self._ctx_lock  # Reference used by sslobject/sslsocket classes.
-
-        class TruststoreSSLObject(ssl.SSLObject):
-            # This object exists because wrap_bio() doesn't
-            # immediately do the handshake so we need to do
-            # certificate verifications after SSLObject.do_handshake()
-
-            def do_handshake(self) -> None:
-                with ctx_lock:
-                    ret = super().do_handshake()
-                    _verify_peercerts(self, server_hostname=self.server_hostname)
-                    return ret
-
-        class TruststoreSSLSocket(ssl.SSLSocket):
-            # Handles do_handshake_on_connect=False, explicit do_handshake()
-            # calls, and the handshake that SSLSocket.connect() triggers.
-            # Must never be called inside _configure_context(). wrap_socket()
-            # guarantees this by always wrapping with do_handshake_on_connect=False.
-            def do_handshake(self, block: bool = False) -> None:
-                with ctx_lock:
-                    ret = super().do_handshake(block)
-                    try:
-                        _verify_peercerts(self, server_hostname=self.server_hostname)
-                    except Exception:
-                        self.close()
-                        raise
-                return ret
-
-        self._ctx.sslsocket_class = TruststoreSSLSocket
-        self._ctx.sslobject_class = TruststoreSSLObject
+        # The shared handshake classes find the lock through their context.
+        self._ctx._truststore_lock = self._ctx_lock  # type: ignore[attr-defined]
+        self._ctx.sslsocket_class = _TruststoreSSLSocket
+        self._ctx.sslobject_class = _TruststoreSSLObject
 
     def wrap_socket(
         self,
