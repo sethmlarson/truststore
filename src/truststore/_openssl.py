@@ -81,13 +81,3 @@ def _capath_contains_certs(capath: str) -> bool:
     if not os.path.isdir(capath):
         return False
     return any(_HASHED_CERT_FILENAME_RE.match(name) for name in os.listdir(capath))
-
-
-def _verify_peercerts_impl(
-    ssl_context: ssl.SSLContext,
-    cert_chain: list[bytes],
-    server_hostname: str | None = None,
-) -> None:
-    # This is a no-op because we've enabled SSLContext's built-in
-    # verification via verify_mode=CERT_REQUIRED, and don't need to repeat it.
-    pass
