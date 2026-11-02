@@ -397,19 +397,19 @@ sha256 = "0da0a936a8aeb554eccb426dc55af3ba63bcdc69fa1a600b5bb305413a4477b5"
 
 [[packages]]
 name = "certifi"
-version = "2026.10.19"
+version = "2026.10.23"
 marker = "\"dev\" in dependency_groups"
 requires-python = ">=3.7"
 index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
-name = "certifi-2026.10.19-py3-none-any.whl"
-upload-time = 2026-10-20 02:24:15.072385+00:00
-url = "https://files.pythonhosted.org/packages/c4/51/29046e48f693c54e5b7412216d447a1d8362c9653148d98c02cdf65fa733/certifi-2026.10.19-py3-none-any.whl"
-size = 136464
+name = "certifi-2026.10.23-py3-none-any.whl"
+upload-time = 2026-10-23 11:36:14.763067+00:00
+url = "https://files.pythonhosted.org/packages/32/d1/a3652fe2c19134d0d15922177821d863cbd7e842d53a21bbe7e8e3a1b5ac/certifi-2026.10.23-py3-none-any.whl"
+size = 135082
 
 [packages.wheels.hashes]
-sha256 = "42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b"
+sha256 = "e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1"
 
 [[packages]]
 name = "cffi"
@@ -1657,7 +1657,7 @@ sha256 = "d9ef29cfd98e17085b4f91bba8fa1570bec6787d5c52ce653ed33a58785585d0"
 
 [[packages]]
 name = "nox"
-version = "2026.8.17"
+version = "2026.10.20"
 marker = "\"dev\" in dependency_groups"
 requires-python = ">=3.10"
 dependencies = [
@@ -1675,13 +1675,13 @@ dependencies = [
 index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
-name = "nox-2026.8.17-py3-none-any.whl"
-upload-time = 2026-08-18 03:09:55.684784+00:00
-url = "https://files.pythonhosted.org/packages/81/71/e0829a0500646070e98bc4442afa2917bfe5b6f1289511d8de853ae86497/nox-2026.8.17-py3-none-any.whl"
-size = 94839
+name = "nox-2026.10.20-py3-none-any.whl"
+upload-time = 2026-10-20 22:07:42.255451+00:00
+url = "https://files.pythonhosted.org/packages/81/5e/91e4a29b20c652283d9dc055400e8259a16a7f957db935f0d9814699a032/nox-2026.10.20-py3-none-any.whl"
+size = 99068
 
 [packages.wheels.hashes]
-sha256 = "a96a5286007cbc0d1eb1930e85738668f6722adba1ffaa48287296a96963086e"
+sha256 = "7aff12bb01471f5b087ada34cf0dbe452b02d840593f2e2afecc4bf6e6d6cd3f"
 
 [[packages]]
 name = "packaging"
@@ -1980,6 +1980,22 @@ size = 51178
 sha256 = "51d5a8ba2be0bbe440b99d2112604c95bbbc3c2748a64260186c541e1729cd80"
 
 [[packages]]
+name = "pygments"
+version = "2.21.0"
+marker = "\"dev\" in dependency_groups"
+requires-python = ">=3.9"
+index = "https://pypi.org/simple/"
+
+[[packages.wheels]]
+name = "pygments-2.21.0-py3-none-any.whl"
+upload-time = 2026-08-17 08:02:44.912148+00:00
+url = "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl"
+size = 1250147
+
+[packages.wheels.hashes]
+sha256 = "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9"
+
+[[packages]]
 name = "pyopenssl"
 version = "26.4.0"
 marker = "\"dev\" in dependency_groups"
@@ -2001,31 +2017,32 @@ sha256 = "f0eb0cb2d581d3ad2b9c489468485e7f2ab6727d08401bcf9d824c3caddf3c1c"
 
 [[packages]]
 name = "pytest"
-version = "8.3.5"
+version = "9.1.1"
 marker = "\"dev\" in dependency_groups"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     { name = "colorama" },
     { name = "exceptiongroup" },
     { name = "iniconfig" },
     { name = "packaging" },
     { name = "pluggy" },
+    { name = "pygments" },
     { name = "tomli" },
 ]
 index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
-name = "pytest-8.3.5-py3-none-any.whl"
-upload-time = 2025-03-02 12:54:52.069556+00:00
-url = "https://files.pythonhosted.org/packages/30/3d/64ad57c803f1fa1e963a7946b6e0fea4a70df53c1a7fed304586539c2bac/pytest-8.3.5-py3-none-any.whl"
-size = 343634
+name = "pytest-9.1.1-py3-none-any.whl"
+upload-time = 2026-06-19 10:58:31.347074+00:00
+url = "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl"
+size = 386536
 
 [packages.wheels.hashes]
-sha256 = "c69214aa47deac29fad6c2a4f590b9c4a9fdb16a403176fe154b79c0b4d4d820"
+sha256 = "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c"
 
 [[packages]]
 name = "pytest-asyncio"
-version = "1.3.0"
+version = "1.4.1"
 marker = "\"dev\" in dependency_groups"
 requires-python = ">=3.10"
 dependencies = [
@@ -2036,13 +2053,13 @@ dependencies = [
 index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
-name = "pytest_asyncio-1.3.0-py3-none-any.whl"
-upload-time = 2025-11-10 16:07:45.537396+00:00
-url = "https://files.pythonhosted.org/packages/e5/35/f8b19922b6a25bc0880171a2f1a003eaeb93657475193ab516fd87cac9da/pytest_asyncio-1.3.0-py3-none-any.whl"
-size = 15075
+name = "pytest_asyncio-1.4.1-py3-none-any.whl"
+upload-time = 2026-10-25 21:05:35.473551+00:00
+url = "https://files.pythonhosted.org/packages/46/d7/cd9e2708afdbf059658adaf08bdb0792ca52489871051d6ce7d498b51277/pytest_asyncio-1.4.1-py3-none-any.whl"
+size = 17061
 
 [packages.wheels.hashes]
-sha256 = "611e26147c7f77640e6d0a92a38ed17c3e9848063698d5c93d5aa7aa11cebff5"
+sha256 = "507afa78ec77c6661164ef1a2368bc7820383fd1a14b2a7f813de8b5a92949cc"
 
 [[packages]]
 name = "pytest-httpserver"
@@ -2213,7 +2230,7 @@ sha256 = "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3"
 
 [[packages]]
 name = "virtualenv"
-version = "21.14.11"
+version = "21.14.13"
 marker = "\"dev\" in dependency_groups"
 requires-python = ">=3.9"
 dependencies = [
@@ -2227,13 +2244,13 @@ dependencies = [
 index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
-name = "virtualenv-21.14.11-py3-none-any.whl"
-upload-time = 2026-10-18 07:06:32.719110+00:00
-url = "https://files.pythonhosted.org/packages/ce/6b/d85da8982b41190eafcb9df91dff9d83fc6989e98af4b5be4c8f85510c95/virtualenv-21.14.11-py3-none-any.whl"
-size = 5495268
+name = "virtualenv-21.14.13-py3-none-any.whl"
+upload-time = 2026-10-22 20:10:15.096358+00:00
+url = "https://files.pythonhosted.org/packages/bb/a9/c10d8a44a29fb94a18b43fdf11f38caca53ae7c9406f11a72b1cb8f624f1/virtualenv-21.14.13-py3-none-any.whl"
+size = 5557094
 
 [packages.wheels.hashes]
-sha256 = "b319f8590a84e5de5f8f2c803ecd2237e9bc0ffa7c1e875e3169c107cecb7454"
+sha256 = "5fbb04138a4861580b78ba9110d529a26bc48fcc93c8ec36bc0202eeed96a788"
 
 [[packages]]
 name = "werkzeug"
@@ -2509,7 +2526,7 @@ sha256 = "681c758b0490f9e96b78e5fa8e8dc6e648e9185bb6eaebe73183c33ea0c445f3"
 
 [tool.nab]
 nab-version = "0.0.23"
-created-at = 2026-10-26 17:55:01.417758+00:00
+created-at = 2026-11-02 15:32:28.628331+00:00
 command-line = [
     "nab",
     "lock",
