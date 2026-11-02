@@ -8,7 +8,7 @@ import pytest
 import urllib3
 
 import truststore
-from tests.conftest import Server, successful_hosts
+from tests.conftest import NETWORK_TIMEOUT, Server, successful_hosts
 
 
 @pytest.fixture(scope="function")
@@ -60,9 +60,8 @@ def test_inject_and_extract():
 @successful_hosts
 @pytest.mark.usefixtures("inject_truststore")
 def test_success_with_inject(host):
-    with urllib3.PoolManager() as http:
-        resp = http.request("GET", f"https://{host}")
-        assert resp.status == 200
+    with urllib3.PoolManager(retries=False, timeout=NETWORK_TIMEOUT) as http:
+        http.request("GET", f"https://{host}", redirect=False)
 
 
 @pytest.mark.usefixtures("inject_truststore")

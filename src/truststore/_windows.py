@@ -264,6 +264,7 @@ CertAddEncodedCertificateToStore.argtypes = (
     PCCERT_CONTEXT,
 )
 CertAddEncodedCertificateToStore.restype = BOOL
+CertAddEncodedCertificateToStore.errcheck = _handle_win_error
 
 CertCreateCertificateContext = wincrypt.CertCreateCertificateContext
 CertCreateCertificateContext.argtypes = (DWORD, c_char_p, DWORD)
@@ -292,6 +293,7 @@ CertVerifyCertificateChainPolicy.argtypes = (
     PCERT_CHAIN_POLICY_STATUS,
 )
 CertVerifyCertificateChainPolicy.restype = BOOL
+CertVerifyCertificateChainPolicy.errcheck = _handle_win_error
 
 CertCloseStore = wincrypt.CertCloseStore
 CertCloseStore.argtypes = (HCERTSTORE, DWORD)
@@ -481,7 +483,7 @@ def _get_and_verify_cert_chain(
                 error_code,
                 0,
                 error_message_buf,
-                sizeof(error_message_buf),
+                len(error_message_buf),
                 None,
             )
 
