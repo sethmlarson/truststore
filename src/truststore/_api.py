@@ -386,6 +386,12 @@ def _verify_peercerts(
     except AttributeError:
         pass
 
+    if (
+        sock_or_sslobj.server_side
+        and sock_or_sslobj.context.verify_mode != ssl.CERT_REQUIRED
+        and sock_or_sslobj.getpeercert(binary_form=True) is None
+    ):
+        return
     cert_bytes = _get_unverified_chain_bytes(sslobj)
     _verify_peercerts_impl(
         sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
