@@ -1,4 +1,6 @@
 import datetime
+import gc
+import platform
 import socket
 import ssl
 
@@ -92,3 +94,18 @@ def test_verify_mode_cert_none(trustme_ca, httpserver, httpserver_ssl_context):
     assert response.status == 200
     assert response.data == b"ok"
     assert len(w) == 1
+
+
+@pytest.mark.skipif(
+    platform.python_implementation() != "CPython",
+    reason="relies on reference counting",
+)
+def test_dropped_context_leaves_no_garbage():
+    gc.collect()
+    gc.disable()
+    try:
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        del ctx
+        assert gc.collect() == 0
+    finally:
+        gc.enable()
