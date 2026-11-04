@@ -1,6 +1,5 @@
 import _ssl
 import os
-import platform
 import socket
 import ssl
 import sys
@@ -14,9 +13,13 @@ from ._ssl_constants import (
     _truststore_SSLContext_super_class,
 )
 
-if platform.system() == "Windows":
+# sys.platform, not platform.system(): on Windows platform.system() runs a WMI
+# query, and CPython 3.12's _wmi module can crash the process (0xC000070A) when
+# that query times out, which happens under load (several Python processes
+# starting at once). sys.platform answers the same question with no query.
+if sys.platform == "win32":
     from ._windows import _configure_context, _verify_peercerts_impl
-elif platform.system() == "Darwin":
+elif sys.platform == "darwin":
     from ._macos import _configure_context, _verify_peercerts_impl
 else:
     from ._openssl import _configure_context, _verify_peercerts_impl
