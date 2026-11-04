@@ -185,7 +185,14 @@ class Server:
     async def close(self) -> None:
         """Close the aiohttp runner and its active connections."""
         if not self._closed:
+            listeners = [site._server for site in self._runner.sites]
             await self._runner.cleanup()
+
+            # Failed TLS handshakes can outlive aiohttp's tracked requests.
+            for listener in listeners:
+                if listener is not None:
+                    await listener.wait_closed()
+
             self._closed = True
 
 
