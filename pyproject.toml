@@ -16,6 +16,7 @@ classifiers = [
   "Intended Audience :: Developers",
   "Operating System :: MacOS",
   "Operating System :: Microsoft",
+  "Operating System :: POSIX :: Linux",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",
@@ -24,6 +25,7 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: 3.15",
+  "Programming Language :: Python :: Free Threading :: 2 - Beta",
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
@@ -67,16 +69,22 @@ platforms = [
   {id = "macos_arm64", runs-on-macos = "14.0"},
   "windows_amd64",
 ]
-implementations = ["cpython", "pypy"]
 
 # PyPy 3.11 uses pp73 on Linux and pp80 on macOS and Windows.
-[tool.nab.matrix.overrides.implementations.pypy]
+[[tool.nab.matrix.include]]
 python = "==3.11"
+implementations = ["pypy"]
 platforms = [
   {id = "linux_x86_64", pypy-abi = "pp73"},
   {id = "macos_arm64", runs-on-macos = "14.0", pypy-abi = "pp80"},
   {id = "windows_amd64", pypy-abi = "pp80"},
 ]
+
+# Add free-threaded CPython 3.15 on the shared platforms.
+[[tool.nab.matrix.include]]
+python = ">=3.15,<3.16"
+implementations = ["cpython"]
+free-threaded = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"

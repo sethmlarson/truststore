@@ -27,7 +27,7 @@ index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
 name = "build-1.6.1-py3-none-any.whl"
-upload-time = 2026-09-10 07:55:59.148398+00:00
+upload-time = 2026-09-10T07:55:59.148398+00:00
 url = "https://files.pythonhosted.org/packages/ad/9b/9fb3585dabcd73a1b2a6267f63f62649347c9e6d072c9fde365b105abb2c/build-1.6.1-py3-none-any.whl"
 size = 31179
 
@@ -36,19 +36,19 @@ sha256 = "ecd351a4be9d35a9eaaba244a7687143c9c7d4aea6ac964e7e7ddab20cbcf4e7"
 
 [[packages]]
 name = "flit-core"
-version = "4.1.0"
+version = "4.2.0"
 marker = "\"build-system\" in dependency_groups"
 requires-python = ">=3.8"
 index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
-name = "flit_core-4.1.0-py3-none-any.whl"
-upload-time = 2026-09-16 10:46:56.119962+00:00
-url = "https://files.pythonhosted.org/packages/38/2a/8ea4bd54734f0fcbb507c28cb6b79d72f528e40498178a01cb35fc5d686f/flit_core-4.1.0-py3-none-any.whl"
-size = 45622
+name = "flit_core-4.2.0-py3-none-any.whl"
+upload-time = 2026-10-27T21:07:46.392085+00:00
+url = "https://files.pythonhosted.org/packages/d9/f0/e546c28b937f094b354ca29b9060c5f1dd5043a332b2905049a51420b7a2/flit_core-4.2.0-py3-none-any.whl"
+size = 48025
 
 [packages.wheels.hashes]
-sha256 = "17398cdd2c38b24047a5a9c93089ec5c0bf12ec3d1469bbf69c27ed7965299db"
+sha256 = "2bee22dc8ba89c2e35b4e1ad575e596aac945c85672dd8f3cad21b629036e044"
 
 [[packages]]
 name = "packaging"
@@ -59,7 +59,7 @@ index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
 name = "packaging-26.3-py3-none-any.whl"
-upload-time = 2026-08-04 18:15:27.159957+00:00
+upload-time = 2026-08-04T18:15:27.159957+00:00
 url = "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl"
 size = 129956
 
@@ -75,7 +75,7 @@ index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
 name = "pyproject_hooks-1.3.3-py3-none-any.whl"
-upload-time = 2026-09-16 08:58:02.960279+00:00
+upload-time = 2026-09-16T08:58:02.960279+00:00
 url = "https://files.pythonhosted.org/packages/85/11/044d1ae1b4ec0d7af88ee5bc91e081be1022533032b906a7bdabdbb60977/pyproject_hooks-1.3.3-py3-none-any.whl"
 size = 10724
 
@@ -83,8 +83,8 @@ size = 10724
 sha256 = "5fc53fdac9f7bd63fbcdc868fb5f90b4784d78a53a3d3388cd738b807441a20b"
 
 [tool.nab]
-nab-version = "0.0.23"
-created-at = 2026-11-02 15:32:54.803770+00:00
+nab-version = "0.0.26"
+created-at = 2026-11-04T05:33:49.443682+00:00
 command-line = [
     "nab",
     "lock",
@@ -108,7 +108,6 @@ command-line = [
     "deploy",
     "--output",
     ".github/workflows/pylock.deploy.toml",
-    "--upgrade",
 ]
 input-path = "pyproject.toml"
 mode = "specific"
@@ -122,3 +121,9 @@ cli-project-overrides = [
     "--project-environment-platform=linux_x86_64",
     "--project-environment-implementation=cpython",
 ]
+
+[tool.nab.validation]
+version = 1
+all-inputs-sha256 = "65155bb02927cb22433a77326fa8048c9814421f0d720e2cb0a2e9701deceb68"
+selection-inputs-sha256 = "d04cc4caef777b98b3eaa8322dc26ec1cb4cfcd01b368e0ce8a1660fc5d3864a"
+contents-sha256 = "ebce8aab7f89f8dda0b2441bbfb0c120184340765f41b4a50e9ab5a3f466208b"
