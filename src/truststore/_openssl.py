@@ -27,6 +27,33 @@ _HASHED_CERT_FILENAME_RE = re.compile(r"^[0-9a-fA-F]{8}\.[0-9]$")
 
 @contextlib.contextmanager
 def _configure_context(ctx: ssl.SSLContext) -> typing.Iterator[None]:
+    # Attempts to only load new certificates
+    # if the existing set of certificates has changed
+    # to avoid a performance issue in repeated
+    # set_default_verify_paths() calls (openssl/openssl#24140).
+
+    # Certificates added to capath already are
+    # automatically discovered and used by OpenSSL.
+
+    ctx_certs = set(ctx.get_ca_certs(binary_form=True))
+    new_certs = set()  # Unused if ctx_certs is empty.
+
+    if ctx_certs:
+        # Load all certs into an empty SSLContext.
+        new_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        _load_ca_certs(new_ctx)
+        new_certs.update(new_ctx.get_ca_certs(binary_form=True))
+
+    # If the new certificates aren't all in the current
+    # context, then load all certificates again into
+    # the existing context.
+    if not ctx_certs or not new_certs.issubset(ctx_certs):
+        _load_ca_certs(ctx)
+
+    yield
+
+
+def _load_ca_certs(ctx: ssl.SSLContext) -> None:
     # First, check whether the default locations from OpenSSL
     # seem like they will give us a usable set of CA certs.
     # ssl.get_default_verify_paths already takes care of:
@@ -44,30 +71,28 @@ def _configure_context(ctx: ssl.SSLContext) -> typing.Iterator[None]:
         # cafile from OpenSSL doesn't exist and capath from OpenSSL doesn't
         # contain certs. If the path is a directory, load the PEM files in
         # that directory; if it's a single file, load it as a file.
-        for cafile_or_cadir in _CA_FILE_CANDIDATES:
-            if os.path.isdir(cafile_or_cadir):
-                cadata = load_cadir_to_cadata(cafile_or_cadir)
+        for cafile_or_capath in _CA_FILE_CANDIDATES:
+            if os.path.isdir(cafile_or_capath):
+                cadata = _load_capath_to_cadata(cafile_or_capath)
                 if cadata:
                     ctx.load_verify_locations(cadata=cadata)
                     break
-            elif os.path.isfile(cafile_or_cadir):
-                ctx.load_verify_locations(cafile=cafile_or_cadir)
+            elif os.path.isfile(cafile_or_capath):
+                ctx.load_verify_locations(cafile=cafile_or_capath)
                 break
 
-    yield
 
-
-def load_cadir_to_cadata(cadir: str) -> str | None:
+def _load_capath_to_cadata(capath: str) -> str | None:
     """Load the CA certificates in a directory by constructing a single PEM
     string.
 
     Returns None if no certificates could be found.
     """
     pems = []
-    for name in os.listdir(cadir):
+    for name in os.listdir(capath):
         if _HASHED_CERT_FILENAME_RE.match(name):
             try:
-                with open(os.path.join(cadir, name), encoding="ascii") as f:
+                with open(os.path.join(capath, name), encoding="ascii") as f:
                     pems.append(f.read())
             except (OSError, UnicodeDecodeError):
                 pass
