@@ -38,7 +38,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15", "3.15t"]
         include:
           # Oldest available patches catch regressions hidden by later patch releases.
           # These builds are unavailable on Ubuntu 26.04.
