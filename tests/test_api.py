@@ -514,12 +514,16 @@ empty_server_hostname_kwargs = pytest.mark.parametrize(
 
 def test_handshake_omits_default_block_argument(monkeypatch) -> None:
     handshake_calls = []
+    verification_calls = []
 
     def zero_argument_handshake(self) -> None:
         handshake_calls.append(self)
 
+    def verify_peercerts(*args, **kwargs) -> None:
+        verification_calls.append((args, kwargs))
+
     monkeypatch.setattr(ssl.SSLSocket, "do_handshake", zero_argument_handshake)
-    monkeypatch.setattr(_api, "_verify_peercerts", lambda *args, **kwargs: None)
+    monkeypatch.setattr(_api, "_verify_peercerts", verify_peercerts)
 
     ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     raw_socket = socket.socket()
@@ -534,6 +538,7 @@ def test_handshake_omits_default_block_argument(monkeypatch) -> None:
         tls_socket.close()
 
     assert handshake_calls == [tls_socket]
+    assert verification_calls == [((tls_socket,), {"server_hostname": "example.com"})]
 
 
 @empty_server_hostname_kwargs
