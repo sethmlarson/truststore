@@ -21,6 +21,7 @@ import urllib3.exceptions
 import truststore
 from tests import SSLContextAdapter
 from tests.conftest import NETWORK_TIMEOUT, decorator_requires_internet
+from truststore import _api
 
 # Make sure the httpserver doesn't hang
 # if the client drops the connection due to a cert verification error
@@ -517,6 +518,35 @@ def test_psk_server_callback_delegates():
 empty_server_hostname_kwargs = pytest.mark.parametrize(
     "server_hostname_kwargs", [{}, {"server_hostname": None}, {"server_hostname": ""}]
 )
+
+
+def test_handshake_omits_default_block_argument(monkeypatch) -> None:
+    handshake_calls = []
+    verification_calls = []
+
+    def zero_argument_handshake(self) -> None:
+        handshake_calls.append(self)
+
+    def verify_peercerts(*args, **kwargs) -> None:
+        verification_calls.append((args, kwargs))
+
+    monkeypatch.setattr(ssl.SSLSocket, "do_handshake", zero_argument_handshake)
+    monkeypatch.setattr(_api, "_verify_peercerts", verify_peercerts)
+
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    raw_socket = socket.socket()
+    tls_socket = ctx.wrap_socket(
+        raw_socket,
+        server_hostname="example.com",
+        do_handshake_on_connect=False,
+    )
+    try:
+        tls_socket.do_handshake()
+    finally:
+        tls_socket.close()
+
+    assert handshake_calls == [tls_socket]
+    assert verification_calls == [((tls_socket,), {"server_hostname": "example.com"})]
 
 
 @empty_server_hostname_kwargs
