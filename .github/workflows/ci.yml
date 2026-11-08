@@ -59,11 +59,14 @@ jobs:
             python: "pypy3.11-v8.0.0"
           - os: windows-latest
             python: "pypy3.11-v8.0.0"
+          - os: windows-latest
+            python: "3.15t"
+            timeout: 25
 
     runs-on: ${{ matrix.os }}
     name: ${{ fromJSON('{"macos-latest":"macOS","windows-latest":"Windows","ubuntu-latest":"Ubuntu","ubuntu-24.04":"Ubuntu"}')[matrix.os] }} Python ${{ matrix.python.key || matrix.python }}  # zizmor: ignore[obfuscation]
     continue-on-error: false
-    timeout-minutes: 10
+    timeout-minutes: ${{ matrix.timeout || 10 }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
