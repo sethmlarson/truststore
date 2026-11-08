@@ -108,7 +108,6 @@ command-line = [
     "deploy",
     "--output",
     ".github/workflows/pylock.deploy.toml",
-    "--upgrade",
 ]
 input-path = "pyproject.toml"
 mode = "specific"
@@ -125,6 +124,6 @@ cli-project-overrides = [
 
 [tool.nab.validation]
 version = 1
-all-inputs-sha256 = "a7abaf4af2036823e2d57a4c9ffdd788fda647fdb1ca36c73e6ee09ace5c4204"
-selection-inputs-sha256 = "68e157ea84ed614dc5d3884aae4c167fbd8a060f1478b8432d5f6ff2de949a6d"
+all-inputs-sha256 = "61c7e5c1e9e7825eff93cb603f0fb81e8f15e1e2f29aa6a503b1d58e3f682362"
+selection-inputs-sha256 = "93be3260cd3aa5b3a65b5c2408283c1a63673d46f3f6b7fa5d1abaf284a4cbb0"
 contents-sha256 = "ebce8aab7f89f8dda0b2441bbfb0c120184340765f41b4a50e9ab5a3f466208b"

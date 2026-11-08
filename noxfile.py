@@ -34,6 +34,8 @@ def test(session):
         "-m",
         "pip",
         "install",
+        "--only-binary",
+        ":all:",
         "-r",
         "pylock.dev.toml",
     )
