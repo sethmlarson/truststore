@@ -1470,9 +1470,18 @@ sha256 = "9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7"
 [[packages]]
 name = "markupsafe"
 version = "3.0.4"
-marker = "\"dev\" in dependency_groups and ((implementation_name == \"cpython\" and python_version == \"3.11\") or python_version == \"3.10\")"
+marker = "\"dev\" in dependency_groups"
 requires-python = ">=3.9"
 index = "https://pypi.org/simple/"
+
+[packages.sdist]
+name = "markupsafe-3.0.4.tar.gz"
+upload-time = 2026-10-02T23:07:22.290270+00:00
+url = "https://files.pythonhosted.org/packages/38/9b/e422a865e1d5d57d0e509b4e0bf1c1a70a7f6382c29a5aa428df994c8bc8/markupsafe-3.0.4.tar.gz"
+size = 153777
+
+[packages.sdist.hashes]
+sha256 = "2e9ad7dd851bf45fab9f75cbff4cb493fee9979e8d8c7c9c3ee119022518edd6"
 
 [[packages.wheels]]
 name = "markupsafe-3.0.4-cp310-cp310-macosx_11_0_arm64.whl"
@@ -1527,6 +1536,141 @@ size = 14328
 
 [packages.wheels.hashes]
 sha256 = "fdb4ca07ab75ffadab4a8b135ad59cdbb3156b99310f3d565370da74a15d6bd3"
+
+[[packages.wheels]]
+name = "markupsafe-3.0.4-cp312-cp312-macosx_11_0_arm64.whl"
+upload-time = 2026-10-02T23:04:52.931524+00:00
+url = "https://files.pythonhosted.org/packages/a2/f0/d6613774d86fbf6d145751d43c59875e47a6f9f17daee0aef173bd36d90e/markupsafe-3.0.4-cp312-cp312-macosx_11_0_arm64.whl"
+size = 12050
+
+[packages.wheels.hashes]
+sha256 = "0930db9bdc62d22944e10b066448bb65dc9abe9112880c7cab8da54db4284d5f"
+
+[[packages.wheels]]
+name = "markupsafe-3.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+upload-time = 2026-10-02T23:04:57.521810+00:00
+url = "https://files.pythonhosted.org/packages/4f/a7/aeedb5140afa41fc74c225e9184ab96723a6e873b6ee1c9fede7283456d8/markupsafe-3.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+size = 22985
+
+[packages.wheels.hashes]
+sha256 = "8e124f974786f831d6043728e38296969d3579db8896fe004682f5758e613581"
+
+[[packages.wheels]]
+name = "markupsafe-3.0.4-cp312-cp312-win_amd64.whl"
+upload-time = 2026-10-02T23:05:06.538516+00:00
+url = "https://files.pythonhosted.org/packages/3f/bf/62495e180b7000aaf30000fff849e933f74264638057176cf46852500adc/markupsafe-3.0.4-cp312-cp312-win_amd64.whl"
+size = 14303
+
+[packages.wheels.hashes]
+sha256 = "11935df9bf455ed0c04eb87bcd720f02b1fe5e02128a9430f23aed6f93336fc7"
+
+[[packages.wheels]]
+name = "markupsafe-3.0.4-cp313-cp313-macosx_11_0_arm64.whl"
+upload-time = 2026-10-02T23:05:14.807879+00:00
+url = "https://files.pythonhosted.org/packages/ca/e0/4030bea613677e333c8a2c901fd405055f657f9d06acba5b7357984b6ef7/markupsafe-3.0.4-cp313-cp313-macosx_11_0_arm64.whl"
+size = 12061
+
+[packages.wheels.hashes]
+sha256 = "73e77980c7207854f00fc4e71fb1626868d5740ab4012623d55c7a99ad122a72"
+
+[[packages.wheels]]
+name = "markupsafe-3.0.4-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+upload-time = 2026-10-02T23:05:19.286064+00:00
+url = "https://files.pythonhosted.org/packages/63/e0/cec6865dfe88cb48fedd4b20aed6af5158e41092adcbf3e028bcc6ec2108/markupsafe-3.0.4-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+size = 23017
+
+[packages.wheels.hashes]
+sha256 = "434139499bb20b502ed3baa1f169e618f924a97e7a777fea1a49446d80106cf6"
+
+[[packages.wheels]]
+name = "markupsafe-3.0.4-cp313-cp313-win_amd64.whl"
+upload-time = 2026-10-02T23:05:28.749548+00:00
+url = "https://files.pythonhosted.org/packages/6f/36/163da64de88a13db79214ef75fa041be7fa13bdb42261cf5b7484de14bfb/markupsafe-3.0.4-cp313-cp313-win_amd64.whl"
+size = 14313
+
+[packages.wheels.hashes]
+sha256 = "1f1f9477e174582b0a1b583d60b66e1f2cf5d3fe12cee985e4aedf44766600e5"
+
+[[packages.wheels]]
+name = "markupsafe-3.0.4-cp314-cp314-macosx_11_0_arm64.whl"
+upload-time = 2026-10-02T23:05:37.397531+00:00
+url = "https://files.pythonhosted.org/packages/ad/40/e2d117b048d47282ade906fbfd92814cbee5647afc13fda88a3406039372/markupsafe-3.0.4-cp314-cp314-macosx_11_0_arm64.whl"
+size = 12061
+
+[packages.wheels.hashes]
+sha256 = "52704c5d36eb6dda8866493decd61111fff86244c9b1ad225ca01b9e91e5970f"
+
+[[packages.wheels]]
+name = "markupsafe-3.0.4-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+upload-time = 2026-10-02T23:05:41.864507+00:00
+url = "https://files.pythonhosted.org/packages/8f/db/d7282caf7ab03af44d5d6fdbaa019b35c7d7f1c90588b839c07cba640d6a/markupsafe-3.0.4-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+size = 23049
+
+[packages.wheels.hashes]
+sha256 = "a8e9f292fcda89b324f2f5c91d13f1424a153e40fc2756f38ee23b15835ff300"
+
+[[packages.wheels]]
+name = "markupsafe-3.0.4-cp314-cp314-win_amd64.whl"
+upload-time = 2026-10-02T23:05:50.788834+00:00
+url = "https://files.pythonhosted.org/packages/80/f0/5792ff768a410f93ee3f84fc19345295ffc352d2c936b424cb37e514714c/markupsafe-3.0.4-cp314-cp314-win_amd64.whl"
+size = 14501
+
+[packages.wheels.hashes]
+sha256 = "c1bc67752d5f21013cfe430df4062441714eab79f65a6a05e01505957e9c35fe"
+
+[[packages.wheels]]
+name = "markupsafe-3.0.4-cp315-cp315-macosx_11_0_arm64.whl"
+upload-time = 2026-10-02T23:06:17.855823+00:00
+url = "https://files.pythonhosted.org/packages/96/24/3ec292b44064c16229e064d770b2625bd8ea941aa61f44905a9fa44942c0/markupsafe-3.0.4-cp315-cp315-macosx_11_0_arm64.whl"
+size = 12075
+
+[packages.wheels.hashes]
+sha256 = "ae9dcb8fbe244cb82f8a6458b455b927a03685e383d9bacf1ea5ce180b96dc97"
+
+[[packages.wheels]]
+name = "markupsafe-3.0.4-cp315-cp315-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+upload-time = 2026-10-02T23:06:22.524416+00:00
+url = "https://files.pythonhosted.org/packages/82/96/ef49135ce260db4ca4a12b119ed468449cd248db6b1468e2112b546d7a2e/markupsafe-3.0.4-cp315-cp315-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+size = 23111
+
+[packages.wheels.hashes]
+sha256 = "925f929d6b59a8b3f8b8c6ac363cd0af7eecc81efb3071770b3c6717c450a369"
+
+[[packages.wheels]]
+name = "markupsafe-3.0.4-cp315-cp315-win_amd64.whl"
+upload-time = 2026-10-02T23:06:33.258900+00:00
+url = "https://files.pythonhosted.org/packages/5b/ec/6000fd82e8791e58fcd0456ec20f098957e2b03d5ed02eb73241a577c0ba/markupsafe-3.0.4-cp315-cp315-win_amd64.whl"
+size = 14496
+
+[packages.wheels.hashes]
+sha256 = "d882a373d8093c2941e01291b7ced96e9cbe4781da9a7751ca7e6c70385e5214"
+
+[[packages.wheels]]
+name = "markupsafe-3.0.4-cp315-cp315t-macosx_11_0_arm64.whl"
+upload-time = 2026-10-02T23:06:37.089349+00:00
+url = "https://files.pythonhosted.org/packages/d6/bb/4af9b3ca0753d654ac75f9531d5bd741bb77ca6e696f36807c475ffc099a/markupsafe-3.0.4-cp315-cp315t-macosx_11_0_arm64.whl"
+size = 12108
+
+[packages.wheels.hashes]
+sha256 = "1c0df495a977d10460a94941799c72d5b5ab03d3858d949b55b5a66c8f371c99"
+
+[[packages.wheels]]
+name = "markupsafe-3.0.4-cp315-cp315t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+upload-time = 2026-10-02T23:06:42.748071+00:00
+url = "https://files.pythonhosted.org/packages/d6/a8/26b606445387d0ceb1eb1f21840094b84e4e3c3c3983d80d10b89823b490/markupsafe-3.0.4-cp315-cp315t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+size = 23634
+
+[packages.wheels.hashes]
+sha256 = "26e9867520db70d37f7fb421a7f0d8adb40171011fb84ce869afa1a83370dfa8"
+
+[[packages.wheels]]
+name = "markupsafe-3.0.4-cp315-cp315t-win_amd64.whl"
+upload-time = 2026-10-02T23:06:54.729627+00:00
+url = "https://files.pythonhosted.org/packages/33/05/55884815414c9706a23deca150b72c25a62109e65b0b6ce232077802c719/markupsafe-3.0.4-cp315-cp315t-win_amd64.whl"
+size = 14522
+
+[packages.wheels.hashes]
+sha256 = "4f6e0852a0283b1b1fd776eeb7b766a5f440b3e2bd31ab51af3b400585f3965c"
 
 [[packages]]
 name = "multidict"
@@ -2243,30 +2387,11 @@ sha256 = "507afa78ec77c6661164ef1a2368bc7820383fd1a14b2a7f813de8b5a92949cc"
 
 [[packages]]
 name = "pytest-httpserver"
-version = "1.1.5"
-marker = "\"dev\" in dependency_groups and (implementation_name == \"pypy\" or python_version == \"3.12\" or python_version == \"3.13\" or python_version == \"3.14\" or python_version == \"3.15\")"
-requires-python = ">=3.10"
-dependencies = [
-    { name = "werkzeug", version = "2.1.2" },
-]
-index = "https://pypi.org/simple/"
-
-[[packages.wheels]]
-name = "pytest_httpserver-1.1.5-py3-none-any.whl"
-upload-time = 2026-02-14T13:27:22.119765+00:00
-url = "https://files.pythonhosted.org/packages/ec/df/0bdf90b84c6a586a9fd2b509523a3ab26b1cc1b1dba2fb62a32e4411ea9e/pytest_httpserver-1.1.5-py3-none-any.whl"
-size = 23330
-
-[packages.wheels.hashes]
-sha256 = "ee83feb587ab652c0c6729598db2820e9048233bac8df756818b7845a1621d0a"
-
-[[packages]]
-name = "pytest-httpserver"
 version = "1.2.0"
-marker = "\"dev\" in dependency_groups and ((implementation_name == \"cpython\" and python_version == \"3.11\") or python_version == \"3.10\")"
+marker = "\"dev\" in dependency_groups"
 requires-python = ">=3.10"
 dependencies = [
-    { name = "werkzeug", version = "3.1.9" },
+    { name = "werkzeug" },
 ]
 index = "https://pypi.org/simple/"
 
@@ -2301,7 +2426,7 @@ sha256 = "edf1886209c2b7dafe35b5bf1708d6ec40ccf6c6b357f0f02807efcec0204c99"
 
 [[packages]]
 name = "python-discovery"
-version = "1.6.6"
+version = "1.9.0"
 marker = "\"dev\" in dependency_groups"
 requires-python = ">=3.9"
 dependencies = [
@@ -2310,13 +2435,13 @@ dependencies = [
 index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
-name = "python_discovery-1.6.6-py3-none-any.whl"
-upload-time = 2026-10-27T19:43:39.226654+00:00
-url = "https://files.pythonhosted.org/packages/23/33/d594dde9e7f510216ca87707b575492a610100497db735ab0b54345c60e2/python_discovery-1.6.6-py3-none-any.whl"
-size = 39043
+name = "python_discovery-1.9.0-py3-none-any.whl"
+upload-time = 2026-10-30T23:24:23.452190+00:00
+url = "https://files.pythonhosted.org/packages/cb/3c/da1cae963a076132dbc4d3c1f0292dd2f373b9d3e072d42f4620801159c1/python_discovery-1.9.0-py3-none-any.whl"
+size = 39841
 
 [packages.wheels.hashes]
-sha256 = "95e644ce8625c62dc195a603da9f8138ca5a35048224911b2cf7b3028025527a"
+sha256 = "fb65edfff3541b7ceb3a39be334a0f69f4cb5148287a053e1874748742fda93b"
 
 [[packages]]
 name = "requests"
@@ -2410,7 +2535,7 @@ sha256 = "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3"
 
 [[packages]]
 name = "virtualenv"
-version = "21.15.1"
+version = "21.15.2"
 marker = "\"dev\" in dependency_groups"
 requires-python = ">=3.9"
 dependencies = [
@@ -2424,34 +2549,18 @@ dependencies = [
 index = "https://pypi.org/simple/"
 
 [[packages.wheels]]
-name = "virtualenv-21.15.1-py3-none-any.whl"
-upload-time = 2026-10-28T01:12:48.605396+00:00
-url = "https://files.pythonhosted.org/packages/ce/23/cdab19d3a9da42ca0938081e163e25f81e610141800ead743ba1ee881f0e/virtualenv-21.15.1-py3-none-any.whl"
-size = 5558848
+name = "virtualenv-21.15.2-py3-none-any.whl"
+upload-time = 2026-10-30T19:18:01.134751+00:00
+url = "https://files.pythonhosted.org/packages/f7/d8/09c9d6df253b2016312dd5ccbb962dfa86a5202f2452604b52e0a9844661/virtualenv-21.15.2-py3-none-any.whl"
+size = 5559530
 
 [packages.wheels.hashes]
-sha256 = "0d14a991689c67600316880eadc0a37b7690cb632e3b4ac67e2bc05b2b2e24a4"
-
-[[packages]]
-name = "werkzeug"
-version = "2.1.2"
-marker = "\"dev\" in dependency_groups and (implementation_name == \"pypy\" or python_version == \"3.12\" or python_version == \"3.13\" or python_version == \"3.14\" or python_version == \"3.15\")"
-requires-python = ">=3.7"
-index = "https://pypi.org/simple/"
-
-[[packages.wheels]]
-name = "Werkzeug-2.1.2-py3-none-any.whl"
-upload-time = 2022-04-28T17:39:34.966663+00:00
-url = "https://files.pythonhosted.org/packages/c4/44/f50f2d22cdfb6d56c03d1b4cc3cfa03ebee2f21b59a7768f151e43415ba5/Werkzeug-2.1.2-py3-none-any.whl"
-size = 224942
-
-[packages.wheels.hashes]
-sha256 = "72a4b735692dd3135217911cbeaa1be5fa3f62bffb8745c5215420a03dc55255"
+sha256 = "fb8c62c7c328e0238061c721068f06b7bc6bd10f7a0f5987195cef1008837ee6"
 
 [[packages]]
 name = "werkzeug"
 version = "3.1.9"
-marker = "\"dev\" in dependency_groups and ((implementation_name == \"cpython\" and python_version == \"3.11\") or python_version == \"3.10\")"
+marker = "\"dev\" in dependency_groups"
 requires-python = ">=3.9"
 dependencies = [
     { name = "markupsafe" },
@@ -2741,8 +2850,8 @@ size = 63617
 sha256 = "681c758b0490f9e96b78e5fa8e8dc6e648e9185bb6eaebe73183c33ea0c445f3"
 
 [tool.nab]
-nab-version = "0.0.26"
-created-at = 2026-11-04T05:33:41.374381+00:00
+nab-version = "0.0.27"
+created-at = 2026-11-08T04:27:25.451919+00:00
 command-line = [
     "nab",
     "lock",
@@ -2750,6 +2859,7 @@ command-line = [
     "dev",
     "--output",
     "pylock.dev.toml",
+    "--upgrade",
 ]
 input-path = "pyproject.toml"
 mode = "universal"
@@ -2762,6 +2872,6 @@ platforms = [
 
 [tool.nab.validation]
 version = 1
-all-inputs-sha256 = "cacf393fa2e246051e3318e86071d119e79f6b6af4c8e82eb2ee95fa35aec108"
-selection-inputs-sha256 = "233de935a9cc433458a53ea7685965c970251eaf541c395b0196241281f0c55d"
-contents-sha256 = "e2976544fc01eb76f36f28bc75a666adbc435fa4fdcb51a3ad2702f228d58469"
+all-inputs-sha256 = "2921dbb439d763f10ca3e69edd1983ec05ec99f404d576e3c7bab7cf6fb992d1"
+selection-inputs-sha256 = "4d9accf9b7e747e4468fd4bf5e541cee01d2f2401443b19de316d3d89ef3651d"
+contents-sha256 = "384c6f04e33eab6c7d25dc087950272d31423e1f4d277a41207bb7d39ea6bcf2"

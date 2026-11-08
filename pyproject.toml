@@ -59,7 +59,7 @@ mode = "universal"
 default-groups = ["dev"]
 decision-order = "stable"
 uploaded-prior-to = "P7D" # Seven-day release cooldown.
-dist-policy = "wheel-only"
+dist-policy = "sdist-if-needed"
 build-policy = "never"
 
 [tool.nab.matrix]
