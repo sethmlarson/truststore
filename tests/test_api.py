@@ -462,6 +462,14 @@ def test_trustme_cert_still_uses_system_certs(trustme_ca):
         http.request("GET", "https://example.com", redirect=False)
 
 
+def test_reload_preserves_sslcontext():
+    context = truststore.SSLContext
+
+    importlib.reload(truststore)
+
+    assert truststore.SSLContext is context
+
+
 def test_macos_10_7_import_error():
     with mock.patch("platform.mac_ver") as mac_ver:
         # This isn't the full structure, but the version is the first element.
