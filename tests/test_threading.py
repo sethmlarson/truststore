@@ -238,6 +238,59 @@ async def test_unconnected_socket_uses_system_verifier(
     assert context.check_hostname is True
 
 
+@pytest.fixture
+def concurrent_rejecting_verifier(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make two verifier calls overlap, then reject both certificates."""
+    verification_started = threading.Barrier(2)
+
+    def reject_certificate(
+        _verification_state: object,
+        _cert_chain: list[bytes],
+        server_hostname: str | None = None,
+    ) -> None:
+        # Both calls must enter the verifier before either can finish.
+        verification_started.wait(timeout=socket.getdefaulttimeout())
+        raise ssl.SSLCertVerificationError("expected rejection")
+
+    monkeypatch.setattr(_api, "_verify_peercerts_impl", reject_certificate)
+
+
+def capture_bio_handshake_error(
+    context: ssl.SSLContext, server: Server
+) -> BaseException:
+    """Capture the exception raised by one BIO handshake."""
+    try:
+        handshake_bio(context, server)
+    except BaseException as error:  # noqa: BLE001
+        return error
+    return AssertionError("Handshake did not raise an error")
+
+
+def run_two_bio_handshakes(
+    context: ssl.SSLContext, server: Server
+) -> list[BaseException]:
+    """Run two BIO handshakes against one shared context."""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [
+            pool.submit(capture_bio_handshake_error, context, server) for _ in range(2)
+        ]
+        return [future.result() for future in futures]
+
+
+@post_handshake_verification_only
+@pytest.mark.usefixtures("concurrent_rejecting_verifier")
+@pytest.mark.asyncio
+async def test_post_handshake_peer_verification_runs_concurrently(
+    invalid_server: Server,
+) -> None:
+    context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    outcomes = await asyncio.to_thread(run_two_bio_handshakes, context, invalid_server)
+
+    assert all(isinstance(error, ssl.SSLCertVerificationError) for error in outcomes), [
+        type(error).__name__ for error in outcomes
+    ]
+
+
 @handshakes
 @pytest.mark.asyncio
 async def test_single_handshake_fails_verification(

@@ -4,6 +4,8 @@ import re
 import ssl
 import typing
 
+from ._verify import PeerVerificationState
+
 # candidates based on https://github.com/tiran/certifi-system-store by Christian Heimes
 _CA_FILE_CANDIDATES = [
     # Alpine, Arch, Fedora 34-43, OpenWRT, RHEL 9-10, BSD
@@ -84,7 +86,7 @@ def _capath_contains_certs(capath: str) -> bool:
 
 
 def _verify_peercerts_impl(
-    ssl_context: ssl.SSLContext,
+    verification_state: PeerVerificationState,
     cert_chain: list[bytes],
     server_hostname: str | None = None,
 ) -> None:
