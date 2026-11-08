@@ -14,12 +14,18 @@ from ._ssl_constants import (
     _truststore_SSLContext_super_class,
 )
 
+_verify_peercerts_impl: (
+    typing.Callable[[ssl.SSLContext, list[bytes], str | None], None] | None
+)
+
 if platform.system() == "Windows":
     from ._windows import _configure_context, _verify_peercerts_impl
 elif platform.system() == "Darwin":
     from ._macos import _configure_context, _verify_peercerts_impl
 else:
-    from ._openssl import _configure_context, _verify_peercerts_impl
+    from ._openssl import _configure_context
+
+    _verify_peercerts_impl = None
 
 if typing.TYPE_CHECKING:
     from typing_extensions import Buffer
@@ -379,6 +385,10 @@ def _verify_peercerts(
     if sock_or_sslobj.context.check_hostname and not server_hostname:
         raise ValueError("check_hostname requires server_hostname")
 
+    # OpenSSL verifies certificates during the handshake itself.
+    if _verify_peercerts_impl is None:
+        return
+
     sslobj: ssl.SSLObject = sock_or_sslobj  # type: ignore[assignment]
     try:
         while not hasattr(sslobj, "get_unverified_chain"):
@@ -387,6 +397,4 @@ def _verify_peercerts(
         pass
 
     cert_bytes = _get_unverified_chain_bytes(sslobj)
-    _verify_peercerts_impl(
-        sock_or_sslobj.context, cert_bytes, server_hostname=server_hostname
-    )
+    _verify_peercerts_impl(sock_or_sslobj.context, cert_bytes, server_hostname)
