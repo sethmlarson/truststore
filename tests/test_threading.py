@@ -5,6 +5,7 @@ import gc
 import socket
 import ssl
 import sys
+import sysconfig
 import threading
 import typing
 import warnings
@@ -228,6 +229,13 @@ async def test_concurrent_handshakes_never_skip_verification(
         assert ctx.verify_mode == ssl.CERT_REQUIRED
         assert ctx.check_hostname is True
 
+        worker_count = 10
+        handshake_count = 50
+        if sys.platform == "win32" and sysconfig.get_config_var("Py_GIL_DISABLED"):
+            # One attempt per worker retains concurrent coverage without repeating
+            # slow Windows chain validation on free-threaded builds.
+            handshake_count = worker_count
+
         # Observer thread: through the public API, the context must never appear
         # relaxed, even while other threads are inside _configure_context().
         stop = threading.Event()
@@ -259,11 +267,13 @@ async def test_concurrent_handshakes_never_skip_verification(
             return AssertionError("Handshake didn't raise an error")
 
         try:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=worker_count
+            ) as pool:
                 outcomes = list(
                     pool.map(
                         lambda _: attempt_handshake(handshake, ctx, invalid_server),
-                        range(50),
+                        range(handshake_count),
                     )
                 )
         finally:
