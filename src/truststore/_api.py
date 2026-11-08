@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import _ssl
 import os
 import platform
@@ -16,13 +18,24 @@ from ._ssl_constants import (
 
 if platform.system() == "Windows":
     from ._windows import _configure_context, _verify_peercerts_impl
+
+    _verify_after_handshake = True
 elif platform.system() == "Darwin":
     from ._macos import _configure_context, _verify_peercerts_impl
+
+    _verify_after_handshake = True
 else:
     from ._openssl import _configure_context, _verify_peercerts_impl
 
+    _verify_after_handshake = False
+
 if typing.TYPE_CHECKING:
     from typing_extensions import Buffer
+
+    if sys.version_info >= (3, 14):
+        _SocketAddress: typing.TypeAlias = tuple[typing.Any, ...] | str | Buffer | int
+    else:
+        _SocketAddress: typing.TypeAlias = tuple[typing.Any, ...] | str | Buffer
 
 # From typeshed/stdlib/ssl.pyi
 _StrOrBytesPath: typing.TypeAlias = str | bytes | os.PathLike[str] | os.PathLike[bytes]
@@ -100,8 +113,10 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         class TruststoreSSLSocket(ssl.SSLSocket):
             # Handles do_handshake_on_connect=False, explicit do_handshake()
             # calls, and the handshake that SSLSocket.connect() triggers.
-            # Must never be called inside _configure_context(). wrap_socket()
-            # guarantees this by always wrapping with do_handshake_on_connect=False.
+            # The lock is reentrant because a connected socket handshakes while
+            # wrap_socket() holds the same lock around _configure_context().
+            do_handshake_on_connect: bool
+
             def do_handshake(self, block: bool = False) -> None:
                 with ctx_lock:
                     ret = super().do_handshake(block)
@@ -111,6 +126,61 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
                         self.close()
                         raise
                 return ret
+
+            def _stdlib_connect(
+                self, address: _SocketAddress, *, connect_ex: bool
+            ) -> int | None:
+                """Call the selected stdlib connection method."""
+                if connect_ex:
+                    return super().connect_ex(address)
+                super().connect(address)
+                return None
+
+            @typing.overload
+            def _connect_with_system_verifier(
+                self,
+                address: _SocketAddress,
+                *,
+                connect_ex: typing.Literal[False],
+            ) -> None: ...
+
+            @typing.overload
+            def _connect_with_system_verifier(
+                self,
+                address: _SocketAddress,
+                *,
+                connect_ex: typing.Literal[True],
+            ) -> int: ...
+
+            def _connect_with_system_verifier(
+                self, address: _SocketAddress, *, connect_ex: bool
+            ) -> int | None:
+                if not _verify_after_handshake:
+                    return self._stdlib_connect(address, connect_ex=connect_ex)
+
+                do_handshake_on_connect = self.do_handshake_on_connect
+                self.do_handshake_on_connect = False
+
+                # CPython creates the native SSL object during connect() for an
+                # unconnected socket. It must inherit truststore's temporary state.
+                try:
+                    with ctx_lock, _configure_context(self.context):
+                        result = self._stdlib_connect(address, connect_ex=connect_ex)
+                finally:
+                    self.do_handshake_on_connect = do_handshake_on_connect
+
+                # Run the requested handshake after the public context state is
+                # restored, so truststore performs the peer verification.
+                if do_handshake_on_connect and (result is None or result == 0):
+                    self.do_handshake()
+
+                return result
+
+            def connect(self, address: _SocketAddress) -> None:
+                self._connect_with_system_verifier(address, connect_ex=False)
+
+            def connect_ex(self, address: _SocketAddress) -> int:
+                return self._connect_with_system_verifier(address, connect_ex=True)
 
         self._ctx.sslsocket_class = TruststoreSSLSocket
         self._ctx.sslobject_class = TruststoreSSLObject
@@ -182,7 +252,7 @@ class SSLContext(_truststore_SSLContext_super_class):  # type: ignore[misc]
         self,
         cafile: str | bytes | os.PathLike[str] | os.PathLike[bytes] | None = None,
         capath: str | bytes | os.PathLike[str] | os.PathLike[bytes] | None = None,
-        cadata: typing.Union[str, "Buffer", None] = None,
+        cadata: str | Buffer | None = None,
     ) -> None:
         return self._ctx.load_verify_locations(
             cafile=cafile, capath=capath, cadata=cadata

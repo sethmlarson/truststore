@@ -194,6 +194,49 @@ handshakes = pytest.mark.parametrize(
     ids=["on_connect", "deferred", "wrap_then_connect", "bio"],
 )
 
+post_handshake_verification_only = pytest.mark.skipif(
+    sys.platform not in ("darwin", "win32"),
+    reason="requires post-handshake peer verification",
+)
+
+
+@post_handshake_verification_only
+@pytest.mark.parametrize("connect_ex", [False, True], ids=["connect", "connect_ex"])
+@pytest.mark.asyncio
+async def test_unconnected_socket_uses_system_verifier(
+    monkeypatch: pytest.MonkeyPatch,
+    invalid_server: Server,
+    *,
+    connect_ex: bool,
+) -> None:
+    def accept_certificates(
+        _context: object,
+        _cert_chain: list[bytes],
+        server_hostname: str | None = None,
+    ) -> None:
+        pass
+
+    monkeypatch.setattr(_api, "_verify_peercerts_impl", accept_certificates)
+    context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+    def connect() -> None:
+        with socket.socket() as raw:
+            tls = context.wrap_socket(raw, server_hostname=invalid_server.host)
+            try:
+                if connect_ex:
+                    assert (
+                        tls.connect_ex((invalid_server.host, invalid_server.port)) == 0
+                    )
+                else:
+                    tls.connect((invalid_server.host, invalid_server.port))
+            finally:
+                tls.close()
+
+    await asyncio.to_thread(connect)
+
+    assert context.verify_mode == ssl.CERT_REQUIRED
+    assert context.check_hostname is True
+
 
 @handshakes
 @pytest.mark.asyncio
