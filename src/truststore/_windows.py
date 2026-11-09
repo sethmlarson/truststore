@@ -1,6 +1,7 @@
 import contextlib  # noqa: I001
 import ssl
 import typing
+from collections.abc import Sequence
 from ctypes import WinDLL  # type: ignore[attr-defined]
 from ctypes import WinError  # type: ignore[attr-defined]
 from ctypes import (
@@ -30,6 +31,7 @@ from ctypes.wintypes import (
 from typing import TYPE_CHECKING, Any
 
 from ._ssl_constants import _set_ssl_context_verify_mode
+from ._verify import PeerVerificationState
 
 HCERTCHAINENGINE = HANDLE
 HCERTSTORE = HANDLE
@@ -323,7 +325,7 @@ FormatMessageW.restype = DWORD
 
 
 def _verify_peercerts_impl(
-    ssl_context: ssl.SSLContext,
+    verification_state: PeerVerificationState,
     cert_chain: list[bytes],
     server_hostname: str | None = None,
 ) -> None:
@@ -365,9 +367,9 @@ def _verify_peercerts_impl(
         chain_params.cbSize = sizeof(chain_params)
         pChainPara = pointer(chain_params)
 
-        if ssl_context.verify_flags & ssl.VERIFY_CRL_CHECK_CHAIN:
+        if verification_state.verify_flags & ssl.VERIFY_CRL_CHECK_CHAIN:
             chain_flags = CERT_CHAIN_REVOCATION_CHECK_CHAIN
-        elif ssl_context.verify_flags & ssl.VERIFY_CRL_CHECK_LEAF:
+        elif verification_state.verify_flags & ssl.VERIFY_CRL_CHECK_LEAF:
             chain_flags = CERT_CHAIN_REVOCATION_CHECK_END_CERT
         else:
             chain_flags = 0
@@ -376,7 +378,7 @@ def _verify_peercerts_impl(
             # First attempt to verify using the default Windows system trust roots
             # (default chain engine).
             _get_and_verify_cert_chain(
-                ssl_context,
+                verification_state,
                 None,
                 hIntermediateCertStore,
                 pCertContext,
@@ -389,13 +391,11 @@ def _verify_peercerts_impl(
             # to the SSLContext using load_verify_locations,
             # try verifying using a custom chain engine
             # that trusts the custom CA certs.
-            custom_ca_certs: list[bytes] | None = ssl_context.get_ca_certs(
-                binary_form=True
-            )
+            custom_ca_certs = verification_state.custom_ca_certs()
             if custom_ca_certs:
                 try:
                     _verify_using_custom_ca_certs(
-                        ssl_context,
+                        verification_state,
                         custom_ca_certs,
                         hIntermediateCertStore,
                         pCertContext,
@@ -415,7 +415,7 @@ def _verify_peercerts_impl(
 
 
 def _get_and_verify_cert_chain(
-    ssl_context: ssl.SSLContext,
+    verification_state: PeerVerificationState,
     hChainEngine: HCERTCHAINENGINE | None,
     hIntermediateCertStore: HCERTSTORE,
     pPeerCertContext: c_void_p,
@@ -446,7 +446,7 @@ def _get_and_verify_cert_chain(
         )
         ssl_extra_cert_chain_policy_para.dwAuthType = AUTHTYPE_SERVER
         ssl_extra_cert_chain_policy_para.fdwChecks = 0
-        if ssl_context.check_hostname is False:
+        if verification_state.check_hostname is False:
             ssl_extra_cert_chain_policy_para.fdwChecks = (
                 SECURITY_FLAG_IGNORE_CERT_CN_INVALID
             )
@@ -457,7 +457,7 @@ def _get_and_verify_cert_chain(
         chain_policy.pvExtraPolicyPara = cast(
             pointer(ssl_extra_cert_chain_policy_para), c_void_p
         )
-        if ssl_context.verify_mode == ssl.CERT_NONE:
+        if verification_state.verify_mode == ssl.CERT_NONE:
             chain_policy.dwFlags |= CERT_CHAIN_POLICY_VERIFY_MODE_NONE_FLAGS
         chain_policy.cbSize = sizeof(chain_policy)
 
@@ -505,8 +505,8 @@ def _get_and_verify_cert_chain(
 
 
 def _verify_using_custom_ca_certs(
-    ssl_context: ssl.SSLContext,
-    custom_ca_certs: list[bytes],
+    verification_state: PeerVerificationState,
+    custom_ca_certs: Sequence[bytes],
     hIntermediateCertStore: HCERTSTORE,
     pPeerCertContext: c_void_p,
     pChainPara: PCERT_CHAIN_PARA,  # type: ignore[valid-type]
@@ -542,7 +542,7 @@ def _verify_using_custom_ca_certs(
 
         # Get and verify a cert chain using the custom chain engine
         _get_and_verify_cert_chain(
-            ssl_context,
+            verification_state,
             hChainEngine,
             hIntermediateCertStore,
             pPeerCertContext,

@@ -5,6 +5,8 @@ from collections.abc import Sized
 import pytest
 import trustme
 
+from truststore._verify import PeerVerificationState
+
 if sys.platform == "win32":
     from ctypes import WINFUNCTYPE, c_void_p, cast, pointer, sizeof
 
@@ -47,9 +49,12 @@ def test_policy_error_buffer_size_counts_wide_characters(
         certificate.cert_chain_pems[0].bytes().decode("ascii")
     )
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    verification_state = PeerVerificationState(context)
 
     with pytest.raises(ssl.SSLCertVerificationError):
-        windows._verify_peercerts_impl(context, [certificate_der], "example.com")
+        windows._verify_peercerts_impl(
+            verification_state, [certificate_der], "example.com"
+        )
 
     assert observed_size == (1024, 1024)
 

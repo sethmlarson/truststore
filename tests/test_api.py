@@ -21,6 +21,7 @@ import urllib3.exceptions
 import truststore
 from tests import SSLContextAdapter
 from tests.conftest import NETWORK_TIMEOUT, decorator_requires_internet
+from truststore import _api
 
 # Make sure the httpserver doesn't hang
 # if the client drops the connection due to a cert verification error
@@ -530,6 +531,17 @@ def test_wrap_socket_server_hostname_validation(
     with pytest.raises(ValueError) as e:
         ctx.wrap_socket(sock, **server_hostname_kwargs)
     assert str(e.value) == "check_hostname requires server_hostname"
+
+
+def test_failed_eager_handshake_closes_wrapped_socket() -> None:
+    ssl_sock = mock.Mock()
+    ssl_sock.gettimeout.return_value = None
+    ssl_sock.do_handshake.side_effect = ssl.SSLError("handshake failed")
+
+    with pytest.raises(ssl.SSLError, match="handshake failed"):
+        _api._handshake_if_connected(ssl_sock, do_handshake_on_connect=True)
+
+    ssl_sock.close.assert_called_once_with()
 
 
 @empty_server_hostname_kwargs

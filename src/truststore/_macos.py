@@ -3,6 +3,7 @@ import ctypes
 import platform
 import ssl
 import typing
+from collections.abc import Sequence
 from ctypes import (
     CDLL,
     POINTER,
@@ -17,6 +18,7 @@ from ctypes import (
 from ctypes.util import find_library
 
 from ._ssl_constants import _set_ssl_context_verify_mode
+from ._verify import PeerVerificationState
 
 _mac_version = platform.mac_ver()[0]
 _mac_version_info = tuple(map(int, _mac_version.split(".")))
@@ -334,7 +336,9 @@ def _cf_string_ref_to_str(cf_string_ref: CFStringRef) -> str | None:  # type: ig
     return string  # type: ignore[no-any-return]
 
 
-def _der_certs_to_cf_cert_array(certs: list[bytes]) -> CFMutableArrayRef:  # type: ignore[valid-type]
+def _der_certs_to_cf_cert_array(
+    certs: Sequence[bytes],
+) -> CFMutableArrayRef:  # type: ignore[valid-type]
     """Builds a CFArray of SecCertificateRefs from a list of DER-encoded certificates.
     Responsibility of the caller to call CoreFoundation.CFRelease on the CFArray.
     """
@@ -378,7 +382,7 @@ def _configure_context(ctx: ssl.SSLContext) -> typing.Iterator[None]:
 
 
 def _verify_peercerts_impl(
-    ssl_context: ssl.SSLContext,
+    verification_state: PeerVerificationState,
     cert_chain: list[bytes],
     server_hostname: str | None = None,
 ) -> None:
@@ -388,7 +392,7 @@ def _verify_peercerts_impl(
     try:
         # Only set a hostname on the policy if we're verifying the hostname
         # on the leaf certificate.
-        if server_hostname is not None and ssl_context.check_hostname:
+        if server_hostname is not None and verification_state.check_hostname:
             cf_str_hostname = None
             try:
                 cf_str_hostname = _bytes_to_cf_string(server_hostname.encode("ascii"))
@@ -400,7 +404,7 @@ def _verify_peercerts_impl(
             ssl_policy = Security.SecPolicyCreateSSL(True, None)
 
         policies = ssl_policy
-        if ssl_context.verify_flags & ssl.VERIFY_CRL_CHECK_CHAIN:
+        if verification_state.verify_flags & ssl.VERIFY_CRL_CHECK_CHAIN:
             # Add explicit policy requiring positive revocation checks
             policies = CoreFoundation.CFArrayCreateMutable(
                 CoreFoundation.kCFAllocatorDefault,
@@ -415,7 +419,7 @@ def _verify_peercerts_impl(
             )
             CoreFoundation.CFArrayAppendValue(policies, revocation_policy)
             CoreFoundation.CFRelease(revocation_policy)
-        elif ssl_context.verify_flags & ssl.VERIFY_CRL_CHECK_LEAF:
+        elif verification_state.verify_flags & ssl.VERIFY_CRL_CHECK_LEAF:
             raise NotImplementedError("VERIFY_CRL_CHECK_LEAF not implemented for macOS")
 
         certs = None
@@ -437,9 +441,7 @@ def _verify_peercerts_impl(
 
         # If there are additional trust anchors to load we need to transform
         # the list of DER-encoded certificates into a CFArray.
-        ctx_ca_certs_der: list[bytes] | None = ssl_context.get_ca_certs(
-            binary_form=True
-        )
+        ctx_ca_certs_der = verification_state.custom_ca_certs()
         if ctx_ca_certs_der:
             ctx_ca_certs = None
             try:
@@ -456,9 +458,9 @@ def _verify_peercerts_impl(
         # so we use SecTrustEvaluate() which means we need to construct error
         # messages ourselves.
         if _is_macos_version_10_14_or_later:
-            _verify_peercerts_impl_macos_10_14(ssl_context, trust)
+            _verify_peercerts_impl_macos_10_14(verification_state, trust)
         else:
-            _verify_peercerts_impl_macos_10_13(ssl_context, trust)
+            _verify_peercerts_impl_macos_10_13(verification_state, trust)
     finally:
         if policies:
             CoreFoundation.CFRelease(policies)
@@ -467,7 +469,7 @@ def _verify_peercerts_impl(
 
 
 def _verify_peercerts_impl_macos_10_13(
-    ssl_context: ssl.SSLContext, sec_trust_ref: typing.Any
+    verification_state: PeerVerificationState, sec_trust_ref: typing.Any
 ) -> None:
     """Verify using 'SecTrustEvaluate' API for macOS 10.13 and earlier.
     macOS 10.14 added the 'SecTrustEvaluateWithError' API.
@@ -483,7 +485,7 @@ def _verify_peercerts_impl_macos_10_13(
     # Apple doesn't document these values in their own API docs.
     # See: https://github.com/xybp888/iOS-SDKs/blob/master/iPhoneOS13.0.sdk/System/Library/Frameworks/Security.framework/Headers/SecTrust.h#L84
     if (
-        ssl_context.verify_mode == ssl.CERT_REQUIRED
+        verification_state.verify_mode == ssl.CERT_REQUIRED
         and sec_trust_result_type_as_int not in (1, 4)
     ):
         # Note that we're not able to ignore only hostname errors
@@ -511,7 +513,7 @@ def _verify_peercerts_impl_macos_10_13(
 
 
 def _verify_peercerts_impl_macos_10_14(
-    ssl_context: ssl.SSLContext, sec_trust_ref: typing.Any
+    verification_state: PeerVerificationState, sec_trust_ref: typing.Any
 ) -> None:
     """Verify using 'SecTrustEvaluateWithError' API for macOS 10.14+."""
     cf_error = CoreFoundation.CFErrorRef()
@@ -536,7 +538,7 @@ def _verify_peercerts_impl_macos_10_14(
         # If the error is a known failure that we're
         # explicitly okay with from SSLContext configuration
         # we can set is_trusted accordingly.
-        if ssl_context.verify_mode != ssl.CERT_REQUIRED and (
+        if verification_state.verify_mode != ssl.CERT_REQUIRED and (
             cf_error_code == CFConst.errSecNotTrusted
             or cf_error_code == CFConst.errSecCertificateExpired
         ):
